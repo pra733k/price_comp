@@ -83,165 +83,12 @@ st.markdown("""
         border-bottom: 2px solid #000000;
     }
     
-    .product-tile {
-        background: white;
-        border: 1px solid #E5E5E5;
-        border-radius: 2px;
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        transition: box-shadow 0.2s;
-    }
-    
-    .product-tile:hover {
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    
-    .comparison-container {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-    }
-    
-    .product-card {
-        text-align: center;
-    }
-    
-    .product-image-wrapper {
-        width: 100%;
-        height: 240px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: #FAFAFA;
-        margin-bottom: 1rem;
-        position: relative;
-    }
-    
-    .product-image {
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
-    }
-    
-    .season-badge {
-        position: absolute;
-        top: 8px;
-        left: 8px;
-        background: white;
-        padding: 4px 10px;
-        font-size: 0.7rem;
-        font-weight: 500;
-        border: 1px solid #E5E5E5;
-        border-radius: 2px;
-        letter-spacing: 0.03em;
-    }
-    
-    .oos-badge {
-        background: #000000;
-        color: white;
-        border: none;
-    }
-    
-    .discount-badge {
-        background: #C41E3A;
-        color: white;
-        padding: 3px 8px;
-        font-size: 0.7rem;
-        font-weight: 600;
-        border-radius: 2px;
-        margin-left: 6px;
-    }
-    
-    .product-title {
-        font-size: 0.9rem;
-        font-weight: 500;
-        color: #000000;
-        margin-bottom: 0.75rem;
-        min-height: 2.8rem;
-        line-height: 1.4;
-        text-decoration: none;
-        display: block;
-    }
-    
-    .product-title:hover {
-        text-decoration: underline;
-    }
-    
-    .price-container {
-        margin-bottom: 0.5rem;
-    }
-    
-    .retail-price {
-        font-size: 0.85rem;
-        color: #999999;
-        text-decoration: line-through;
-        margin-right: 6px;
-    }
-    
-    .sale-price {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #C41E3A;
-    }
-    
-    .final-price {
-        font-size: 1rem;
-        font-weight: 600;
-        color: #000000;
-    }
-    
-    .site-label {
-        font-size: 0.75rem;
-        color: #666666;
-        font-weight: 500;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        margin-bottom: 0.5rem;
-    }
-    
-    .filter-title {
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        margin-bottom: 1rem;
-        color: #000000;
-    }
-    
-    .metric-card {
-        background: white;
-        padding: 1.5rem;
-        border-radius: 2px;
-        border: 1px solid #E5E5E5;
-        margin-bottom: 1.5rem;
-    }
-    
-    .metric-title {
-        font-size: 0.85rem;
-        font-weight: 600;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-        color: #000000;
-        margin-bottom: 0.5rem;
-    }
-    
-    .metric-value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: #000000;
-        margin-bottom: 0.25rem;
-    }
-    
-    .metric-label {
-        font-size: 0.8rem;
-        color: #666666;
-    }
-    
     .result-count {
         font-size: 0.9rem;
         color: #666666;
         margin-bottom: 1.5rem;
         font-weight: 400;
+        text-align: center;
     }
     
     .stButton > button {
@@ -279,6 +126,98 @@ st.markdown("""
         font-style: italic;
         margin-bottom: 1rem;
         line-height: 1.5;
+    }
+    
+    /* Product card styling */
+    div[data-testid="column"] {
+        padding: 0.5rem;
+    }
+    
+    .product-container {
+        background: white;
+        border: 1px solid #E5E5E5;
+        border-radius: 2px;
+        padding: 1rem;
+        height: 100%;
+        transition: box-shadow 0.2s;
+    }
+    
+    .product-container:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    
+    .site-label-header {
+        font-size: 0.75rem;
+        color: #666666;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-bottom: 0.75rem;
+        text-align: center;
+    }
+    
+    .season-badge-inline {
+        display: inline-block;
+        background: white;
+        padding: 3px 8px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        border: 1px solid #E5E5E5;
+        border-radius: 2px;
+        letter-spacing: 0.03em;
+        margin-top: 0.5rem;
+    }
+    
+    .oos-badge-inline {
+        display: inline-block;
+        background: #000000;
+        color: white;
+        padding: 3px 8px;
+        font-size: 0.7rem;
+        font-weight: 500;
+        border-radius: 2px;
+        letter-spacing: 0.03em;
+        margin-top: 0.5rem;
+    }
+    
+    .price-display {
+        text-align: center;
+        margin-top: 0.75rem;
+    }
+    
+    .retail-price-text {
+        font-size: 0.85rem;
+        color: #999999;
+        text-decoration: line-through;
+        margin-right: 6px;
+    }
+    
+    .sale-price-text {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #C41E3A;
+    }
+    
+    .final-price-text {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #000000;
+    }
+    
+    .discount-badge-inline {
+        display: inline-block;
+        background: #C41E3A;
+        color: white;
+        padding: 3px 8px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        border-radius: 2px;
+        margin-left: 6px;
+    }
+    
+    .tile-separator {
+        margin: 2rem 0;
+        border-top: 1px solid #E5E5E5;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -393,88 +332,66 @@ def render_header():
     """, unsafe_allow_html=True)
 
 
-def render_product_tile(row, idx):
-    """Render a single comparison tile with Cettire vs Match"""
+def render_product_card(row, side='left'):
+    """Render a single product card using Streamlit columns"""
     
-    c_oos = row['is_oos']
-    c_season = row['c_season_tag'] if pd.notna(row['c_season_tag']) and row['c_season_tag'] not in ['No Tag', 'No tag'] else ''
-    c_title = str(row['c_title']) if pd.notna(row['c_title']) else 'N/A'
-    c_img = str(row['c_image-src']) if pd.notna(row['c_image-src']) else ''
-    c_url = str(row['c_product_url']) if pd.notna(row['c_product_url']) else '#'
+    if side == 'left':
+        is_oos = row['is_oos']
+        season = row['c_season_tag'] if pd.notna(row['c_season_tag']) and row['c_season_tag'] not in ['No Tag', 'No tag'] else ''
+        title = str(row['c_title']) if pd.notna(row['c_title']) else 'N/A'
+        img = str(row['c_image-src']) if pd.notna(row['c_image-src']) else None
+        url = str(row['c_product_url']) if pd.notna(row['c_product_url']) else '#'
+        retail = row.get('c_retail_price')
+        sale = row.get('c_sale_price')
+        final = row.get('c_final_price')
+        discount = row.get('c_discount_pct')
+        label = "CETTIRE"
+    else:
+        is_oos = row['m_season_tag'] == 'Out Of Stock'
+        season = row['m_season_tag'] if pd.notna(row['m_season_tag']) and row['m_season_tag'] not in ['No Tag', 'No tag', 'Na'] else ''
+        title = str(row['m_title']) if pd.notna(row['m_title']) else 'N/A'
+        img = str(row['m_image-src']) if pd.notna(row['m_image-src']) else None
+        url = str(row['matchlink']) if pd.notna(row['matchlink']) else '#'
+        retail = row.get('m_retail_price')
+        sale = row.get('m_sale_price')
+        final = row.get('m_final_price')
+        discount = row.get('m_discount_pct')
+        label = str(row['domain']).upper() if pd.notna(row['domain']) else 'N/A'
     
-    m_oos = row['m_season_tag'] == 'Out Of Stock'
-    m_season = row['m_season_tag'] if pd.notna(row['m_season_tag']) and row['m_season_tag'] not in ['No Tag', 'No tag', 'Na'] else ''
-    m_title = str(row['m_title']) if pd.notna(row['m_title']) else 'N/A'
-    m_img = str(row['m_image-src']) if pd.notna(row['m_image-src']) else ''
-    m_url = str(row['matchlink']) if pd.notna(row['matchlink']) else '#'
-    m_domain = str(row['domain']) if pd.notna(row['domain']) else 'N/A'
-    
-    tile_html = f"""
-    <div class="product-tile">
-        <div class="comparison-container">
-            <div class="product-card">
-                <div class="site-label">Cettire</div>
-                <div class="product-image-wrapper">
-                    <img src="{c_img}" class="product-image" onerror="this.style.display='none'">
-                    {f'<span class="season-badge oos-badge">OUT OF STOCK</span>' if c_oos else (f'<span class="season-badge">{c_season}</span>' if c_season else '')}
-                </div>
-                <a href="{c_url}" target="_blank" class="product-title">{c_title}</a>
-    """
-    
-    if not c_oos:
-        if pd.notna(row.get('c_sale_price')) and pd.notna(row.get('c_retail_price')):
-            discount = row.get('c_discount_pct')
-            discount_badge = f'<span class="discount-badge">-{int(discount)}%</span>' if pd.notna(discount) else ''
-            tile_html += f"""
-                <div class="price-container">
-                    <span class="retail-price">AUD ${row['c_retail_price']:.2f}</span>
-                    <span class="sale-price">AUD ${row['c_sale_price']:.2f}</span>
-                    {discount_badge}
-                </div>
-            """
-        elif pd.notna(row.get('c_final_price')):
-            tile_html += f"""
-                <div class="price-container">
-                    <span class="final-price">AUD ${row['c_final_price']:.2f}</span>
-                </div>
-            """
-    
-    tile_html += f"""
-            </div>
-            <div class="product-card">
-                <div class="site-label">{m_domain}</div>
-                <div class="product-image-wrapper">
-                    <img src="{m_img}" class="product-image" onerror="this.style.display='none'">
-                    {f'<span class="season-badge oos-badge">OUT OF STOCK</span>' if m_oos else (f'<span class="season-badge">{m_season}</span>' if m_season else '')}
-                </div>
-                <a href="{m_url}" target="_blank" class="product-title">{m_title}</a>
-    """
-    
-    if not m_oos:
-        if pd.notna(row.get('m_sale_price')) and pd.notna(row.get('m_retail_price')):
-            discount = row.get('m_discount_pct')
-            discount_badge = f'<span class="discount-badge">-{int(discount)}%</span>' if pd.notna(discount) else ''
-            tile_html += f"""
-                <div class="price-container">
-                    <span class="retail-price">AUD ${row['m_retail_price']:.2f}</span>
-                    <span class="sale-price">AUD ${row['m_sale_price']:.2f}</span>
-                    {discount_badge}
-                </div>
-            """
-        elif pd.notna(row.get('m_final_price')):
-            tile_html += f"""
-                <div class="price-container">
-                    <span class="final-price">AUD ${row['m_final_price']:.2f}</span>
-                </div>
-            """
-    
-    tile_html += """
-            </div>
-        </div>
-    </div>
-    """
-    
-    st.markdown(tile_html, unsafe_allow_html=True)
+    with st.container():
+        st.markdown(f'<div class="product-container">', unsafe_allow_html=True)
+        st.markdown(f'<div class="site-label-header">{label}</div>', unsafe_allow_html=True)
+        
+        # Image
+        if img and img != 'None':
+            try:
+                st.image(img, use_container_width=True)
+            except:
+                st.markdown('<div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999;">No Image</div>', unsafe_allow_html=True)
+        else:
+            st.markdown('<div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999;">No Image</div>', unsafe_allow_html=True)
+        
+        # Season badge
+        if is_oos:
+            st.markdown('<div style="text-align: center;"><span class="oos-badge-inline">OUT OF STOCK</span></div>', unsafe_allow_html=True)
+        elif season:
+            st.markdown(f'<div style="text-align: center;"><span class="season-badge-inline">{season}</span></div>', unsafe_allow_html=True)
+        
+        # Title with link
+        st.markdown(f'<div style="text-align: center; margin: 0.75rem 0; min-height: 3rem;"><a href="{url}" target="_blank" style="color: #000; text-decoration: none; font-size: 0.9rem; font-weight: 500;">{title}</a></div>', unsafe_allow_html=True)
+        
+        # Prices - only show if not OOS
+        if not is_oos:
+            price_html = '<div class="price-display">'
+            if pd.notna(sale) and pd.notna(retail):
+                discount_badge = f'<span class="discount-badge-inline">-{int(discount)}%</span>' if pd.notna(discount) else ''
+                price_html += f'<span class="retail-price-text">AUD ${retail:.2f}</span><span class="sale-price-text">AUD ${sale:.2f}</span>{discount_badge}'
+            elif pd.notna(final):
+                price_html += f'<span class="final-price-text">AUD ${final:.2f}</span>'
+            price_html += '</div>'
+            st.markdown(price_html, unsafe_allow_html=True)
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def comparison_page(df):
@@ -483,7 +400,7 @@ def comparison_page(df):
     st.markdown('<h2 style="text-align: center; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 2rem;">BALLY PRODUCTS ON CETTIRE</h2>', unsafe_allow_html=True)
     
     with st.sidebar:
-        st.markdown('<div class="filter-title">Filters</div>', unsafe_allow_html=True)
+        st.markdown('<div style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 1rem; color: #000000;">Filters</div>', unsafe_allow_html=True)
         
         categories = sorted([c for c in df['category'].dropna().unique() if str(c) != 'nan'])
         selected_categories = st.multiselect('Category', categories, default=[])
@@ -515,6 +432,189 @@ def comparison_page(df):
         if use_custom:
             col1, col2 = st.columns(2)
             with col1:
+            filter_by = st.selectbox('Filter by', ['All', 'Category', 'Site'])
+        
+        with col2:
+            if filter_by == 'Category':
+                filter_value = st.selectbox('Select', sorted(df_price_valid['category'].unique()))
+                filtered_dist = df_price_valid[df_price_valid['category'] == filter_value]
+            elif filter_by == 'Site':
+                filter_value = st.selectbox('Select', sorted(df_price_valid['domain_group'].unique()))
+                filtered_dist = df_price_valid[df_price_valid['domain_group'] == filter_value]
+            else:
+                filtered_dist = df_price_valid
+        
+        fig_hist = px.histogram(
+            filtered_dist,
+            x='price_diff',
+            nbins=50,
+            title='Price Difference Distribution',
+            labels={'price_diff': 'Price Difference (AUD)'},
+            color_discrete_sequence=['#000000']
+        )
+        fig_hist.update_layout(
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font=dict(family='Inter', size=12),
+            showlegend=False
+        )
+        st.plotly_chart(fig_hist, use_container_width=True)
+        
+        fig_box = px.box(
+            filtered_dist,
+            y='price_diff',
+            title='Price Difference Boxplot',
+            labels={'price_diff': 'Price Difference (AUD)'},
+            color_discrete_sequence=['#000000']
+        )
+        fig_box.update_layout(
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            font=dict(family='Inter', size=12),
+            showlegend=False
+        )
+        st.plotly_chart(fig_box, use_container_width=True)
+    else:
+        st.warning("No valid price comparison data available.")
+    
+    # TOP 10 PRICE DISCREPANCIES
+    st.markdown('<div class="section-header">Top 10 Price Discrepancies</div>', unsafe_allow_html=True)
+    st.markdown('<div class="explanation-text">Products with the largest absolute price differences (positive or negative).</div>', unsafe_allow_html=True)
+    
+    if not df_price_valid.empty:
+        df_price_valid_copy = df_price_valid.copy()
+        df_price_valid_copy['abs_price_diff'] = df_price_valid_copy['price_diff'].abs()
+        top_10 = df_price_valid_copy.nlargest(10, 'abs_price_diff')[
+            ['c_image-src', 'c_title', 'c_final_price', 'm_final_price', 'price_diff', 'domain', 'c_product_url', 'matchlink']
+        ].copy()
+        
+        for idx, row in top_10.iterrows():
+            col1, col2 = st.columns([1, 4])
+            
+            with col1:
+                img_url = row['c_image-src'] if pd.notna(row['c_image-src']) else ''
+                if img_url:
+                    try:
+                        st.image(img_url, width=100)
+                    except:
+                        st.write("Image unavailable")
+            
+            with col2:
+                st.markdown(f"**{row['c_title']}**")
+                st.markdown(f"Cettire: AUD ${row['c_final_price']:.2f} | {row['domain']}: AUD ${row['m_final_price']:.2f}")
+                diff_color = "green" if row['price_diff'] < 0 else "red"
+                st.markdown(f"**Price Difference: <span style='color:{diff_color}'>AUD ${row['price_diff']:.2f}</span>**", unsafe_allow_html=True)
+                st.markdown(f"[Cettire Link]({row['c_product_url']}) | [Match Link]({row['matchlink']})")
+            
+            st.markdown("---")
+    else:
+        st.warning("No valid price comparison data available.")
+    
+    # OUT OF STOCK & NA SUMMARY
+    st.markdown('<div class="section-header">Out of Stock & NA Summary</div>', unsafe_allow_html=True)
+    st.markdown('<div class="explanation-text">Count of products that are out of stock or have no matching data. These are excluded from price difference calculations.</div>', unsafe_allow_html=True)
+    
+    oos_count = df[df['is_oos']].shape[0]
+    na_count = df[df['price_diff'].isna()].shape[0]
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown(f"""
+        <div style="background: white; padding: 1.5rem; border-radius: 2px; border: 1px solid #E5E5E5; margin-bottom: 1.5rem;">
+            <div style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #000000; margin-bottom: 0.5rem;">OUT OF STOCK</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #000000; margin-bottom: 0.25rem;">{oos_count}</div>
+            <div style="font-size: 0.8rem; color: #666666;">Products marked as OOS</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div style="background: white; padding: 1.5rem; border-radius: 2px; border: 1px solid #E5E5E5; margin-bottom: 1.5rem;">
+            <div style="font-size: 0.85rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #000000; margin-bottom: 0.5rem;">MISSING MATCH DATA</div>
+            <div style="font-size: 2rem; font-weight: 700; color: #000000; margin-bottom: 0.25rem;">{na_count}</div>
+            <div style="font-size: 0.8rem; color: #666666;">Products with no price comparison</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # OOS by Category
+    oos_by_category = df[df['is_oos']].groupby('category').size().reset_index(name='Count')
+    if not oos_by_category.empty:
+        st.markdown("**OOS by Category**")
+        st.dataframe(oos_by_category, use_container_width=True)
+    else:
+        st.info("No out-of-stock products by category.")
+    
+    # OOS by Site
+    oos_by_site = df[df['is_oos']].groupby('domain_group').size().reset_index(name='Count')
+    if not oos_by_site.empty:
+        st.markdown("**OOS by Site**")
+        st.dataframe(oos_by_site, use_container_width=True)
+    else:
+        st.info("No out-of-stock products by site.")
+    
+    # NA by Category
+    na_by_category = df[df['price_diff'].isna()].groupby('category').size().reset_index(name='Count')
+    if not na_by_category.empty:
+        st.markdown("**NA/Missing Match by Category**")
+        st.dataframe(na_by_category, use_container_width=True)
+    else:
+        st.info("No missing match data by category.")
+    
+    # NA by Site
+    na_by_site = df[df['price_diff'].isna()].groupby('domain_group').size().reset_index(name='Count')
+    if not na_by_site.empty:
+        st.markdown("**NA/Missing Match by Site**")
+        st.dataframe(na_by_site, use_container_width=True)
+    else:
+        st.info("No missing match data by site.")
+    
+    # DOWNLOAD DATA
+    st.markdown('<div class="section-header">Download Data</div>', unsafe_allow_html=True)
+    st.markdown('<div class="explanation-text">Export full dataset or filtered subsets for external analysis.</div>', unsafe_allow_html=True)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        csv_full = df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download Full Dataset",
+            data=csv_full,
+            file_name=f"bally_analysis_full_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
+    
+    with col2:
+        csv_filtered = df_price_valid.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download Filtered Dataset (Price Valid)",
+            data=csv_filtered,
+            file_name=f"bally_analysis_filtered_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
+
+
+def main():
+    """Main application"""
+    render_header()
+    
+    df = load_data()
+    
+    if df is None or df.empty:
+        st.error("Failed to load data. Please check that 'match_final.csv' exists in the same directory as this script.")
+        st.stop()
+    
+    tab1, tab2 = st.tabs(["ANALYTICS", "COMPARISON"])
+    
+    with tab1:
+        analytics_page(df)
+    
+    with tab2:
+        comparison_page(df)
+
+
+if __name__ == "__main__":
+    main()1:
                 min_price = st.number_input('Min', min_value=0, value=0)
             with col2:
                 max_price = st.number_input('Max', min_value=0, value=10000)
@@ -603,6 +703,7 @@ def comparison_page(df):
     
     st.markdown(f'<div class="result-count">Showing {min(items_per_page, total_items)} of {total_items} results</div>', unsafe_allow_html=True)
     
+    # Pagination controls
     col1, col2, col3, col4, col5 = st.columns([1, 1, 2, 1, 1])
     
     with col1:
@@ -628,14 +729,18 @@ def comparison_page(df):
             st.session_state.current_page = total_pages
             st.rerun()
     
+    # Display products
     start_idx = (st.session_state.current_page - 1) * items_per_page
     end_idx = min(start_idx + items_per_page, total_items)
     page_df = filtered_df.iloc[start_idx:end_idx]
     
     for idx, row in page_df.iterrows():
-        render_product_tile(row, idx)
-    
-    st.markdown('<div style="margin-top: 2rem;"></div>', unsafe_allow_html=True)
+        col_left, col_right = st.columns(2)
+        with col_left:
+            render_product_card(row, side='left')
+        with col_right:
+            render_product_card(row, side='right')
+        st.markdown('<div class="tile-separator"></div>', unsafe_allow_html=True)
 
 
 def analytics_page(df):
@@ -738,187 +843,4 @@ def analytics_page(df):
     if not df_price_valid.empty:
         col1, col2 = st.columns(2)
         
-        with col1:
-            filter_by = st.selectbox('Filter by', ['All', 'Category', 'Site'])
-        
-        with col2:
-            if filter_by == 'Category':
-                filter_value = st.selectbox('Select', sorted(df_price_valid['category'].unique()))
-                filtered_dist = df_price_valid[df_price_valid['category'] == filter_value]
-            elif filter_by == 'Site':
-                filter_value = st.selectbox('Select', sorted(df_price_valid['domain_group'].unique()))
-                filtered_dist = df_price_valid[df_price_valid['domain_group'] == filter_value]
-            else:
-                filtered_dist = df_price_valid
-        
-        fig_hist = px.histogram(
-            filtered_dist,
-            x='price_diff',
-            nbins=50,
-            title='Price Difference Distribution',
-            labels={'price_diff': 'Price Difference (AUD)'},
-            color_discrete_sequence=['#000000']
-        )
-        fig_hist.update_layout(
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            font=dict(family='Inter', size=12),
-            showlegend=False
-        )
-        st.plotly_chart(fig_hist, use_container_width=True)
-        
-        fig_box = px.box(
-            filtered_dist,
-            y='price_diff',
-            title='Price Difference Boxplot',
-            labels={'price_diff': 'Price Difference (AUD)'},
-            color_discrete_sequence=['#000000']
-        )
-        fig_box.update_layout(
-            plot_bgcolor='white',
-            paper_bgcolor='white',
-            font=dict(family='Inter', size=12),
-            showlegend=False
-        )
-        st.plotly_chart(fig_box, use_container_width=True)
-    else:
-        st.warning("No valid price comparison data available.")
-    
-    # TOP 10 PRICE DISCREPANCIES
-    st.markdown('<div class="section-header">Top 10 Price Discrepancies</div>', unsafe_allow_html=True)
-    st.markdown('<div class="explanation-text">Products with the largest absolute price differences (positive or negative).</div>', unsafe_allow_html=True)
-    
-    if not df_price_valid.empty:
-        df_price_valid_copy = df_price_valid.copy()
-        df_price_valid_copy['abs_price_diff'] = df_price_valid_copy['price_diff'].abs()
-        top_10 = df_price_valid_copy.nlargest(10, 'abs_price_diff')[
-            ['c_image-src', 'c_title', 'c_final_price', 'm_final_price', 'price_diff', 'domain', 'c_product_url', 'matchlink']
-        ].copy()
-        
-        for idx, row in top_10.iterrows():
-            col1, col2 = st.columns([1, 4])
-            
-            with col1:
-                img_url = row['c_image-src'] if pd.notna(row['c_image-src']) else ''
-                if img_url:
-                    try:
-                        st.image(img_url, width=100)
-                    except:
-                        st.write("Image unavailable")
-            
-            with col2:
-                st.markdown(f"**{row['c_title']}**")
-                st.markdown(f"Cettire: AUD ${row['c_final_price']:.2f} | {row['domain']}: AUD ${row['m_final_price']:.2f}")
-                diff_color = "green" if row['price_diff'] < 0 else "red"
-                st.markdown(f"**Price Difference: <span style='color:{diff_color}'>AUD ${row['price_diff']:.2f}</span>**", unsafe_allow_html=True)
-                st.markdown(f"[Cettire Link]({row['c_product_url']}) | [Match Link]({row['matchlink']})")
-            
-            st.markdown("---")
-    else:
-        st.warning("No valid price comparison data available.")
-    
-    # OUT OF STOCK & NA SUMMARY
-    st.markdown('<div class="section-header">Out of Stock & NA Summary</div>', unsafe_allow_html=True)
-    st.markdown('<div class="explanation-text">Count of products that are out of stock or have no matching data. These are excluded from price difference calculations.</div>', unsafe_allow_html=True)
-    
-    oos_count = df[df['is_oos']].shape[0]
-    na_count = df[df['price_diff'].isna()].shape[0]
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-title">Out of Stock</div>
-            <div class="metric-value">{oos_count}</div>
-            <div class="metric-label">Products marked as OOS</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <div class="metric-title">Missing Match Data</div>
-            <div class="metric-value">{na_count}</div>
-            <div class="metric-label">Products with no price comparison</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # OOS by Category
-    oos_by_category = df[df['is_oos']].groupby('category').size().reset_index(name='Count')
-    if not oos_by_category.empty:
-        st.markdown("**OOS by Category**")
-        st.dataframe(oos_by_category, use_container_width=True)
-    else:
-        st.info("No out-of-stock products by category.")
-    
-    # OOS by Site
-    oos_by_site = df[df['is_oos']].groupby('domain_group').size().reset_index(name='Count')
-    if not oos_by_site.empty:
-        st.markdown("**OOS by Site**")
-        st.dataframe(oos_by_site, use_container_width=True)
-    else:
-        st.info("No out-of-stock products by site.")
-    
-    # NA by Category
-    na_by_category = df[df['price_diff'].isna()].groupby('category').size().reset_index(name='Count')
-    if not na_by_category.empty:
-        st.markdown("**NA/Missing Match by Category**")
-        st.dataframe(na_by_category, use_container_width=True)
-    else:
-        st.info("No missing match data by category.")
-    
-    # NA by Site
-    na_by_site = df[df['price_diff'].isna()].groupby('domain_group').size().reset_index(name='Count')
-    if not na_by_site.empty:
-        st.markdown("**NA/Missing Match by Site**")
-        st.dataframe(na_by_site, use_container_width=True)
-    else:
-        st.info("No missing match data by site.")
-    
-    # DOWNLOAD DATA
-    st.markdown('<div class="section-header">Download Data</div>', unsafe_allow_html=True)
-    st.markdown('<div class="explanation-text">Export full dataset or filtered subsets for external analysis.</div>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        csv_full = df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Download Full Dataset",
-            data=csv_full,
-            file_name=f"bally_analysis_full_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
-    
-    with col2:
-        csv_filtered = df_price_valid.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Download Filtered Dataset (Price Valid)",
-            data=csv_filtered,
-            file_name=f"bally_analysis_filtered_{datetime.now().strftime('%Y%m%d')}.csv",
-            mime="text/csv"
-        )
-
-
-def main():
-    """Main application"""
-    render_header()
-    
-    df = load_data()
-    
-    if df is None or df.empty:
-        st.error("Failed to load data. Please check that 'match_final.csv' exists in the same directory as this script.")
-        st.stop()
-    
-    tab1, tab2 = st.tabs(["ANALYTICS", "COMPARISON"])
-    
-    with tab1:
-        analytics_page(df)
-    
-    with tab2:
-        comparison_page(df)
-
-
-if __name__ == "__main__":
-    main()
+        with col
