@@ -1,614 +1,1031 @@
 # streamlit_app.py
-# Bally products on Cettire – internal analytics & comparison UI
-# Requirements: streamlit, pandas, numpy
-# Data file expected: match_final.csv (AUD prices, schema provided by user)
+# Bally products on Cettire – Comparison & Analytics UI
+# Data source: plain CSV `match_final.csv` with columns:
+# c_link,domain,category,c_title,c_retail_price,c_sale_price,c_image-src,c_season_tag,c_product_url,c_product_id,
+# matchlink,m_title,m_retail_price,m_sale_price,m_image-src,m_product_id,m_season_tag
+#
+# Definitions:
+# - Final price (both sides): final = sale if present else retail; if both missing => NA (excluded from numeric stats).
+# - Price difference (Diff Cettire – Match): positive => Cettire more expensive; negative => Cettire cheaper.
+# - Pct_Cheaper_Cettire: % rows (with both finals & match not OOS) where Cettire final < Match final.
+# - Pct_Cettire_Discount: % rows where c_sale < c_retail (on Cettire).
+# - Pct_Match_Discount: % rows where m_sale < m_retail (on matched site), excluding OOS.
 
+from __future__ import annotations
 import math
-import re
-from typing import Optional, Tuple
-
 import numpy as np
 import pandas as pd
+import altair as alt
 import streamlit as st
+# ... other imports ...
 
-# ------------------------------
-# Page setup (Bally light style)
-# ------------------------------
-st.set_page_config(
-    page_title="Bally products on Cettire",
-    page_icon="👜",
-    layout="wide",
-)
+st.set_page_config(page_title="Bally – Cettire Benchmark", layout="wide")
 
-# --- Bally-like light theme overrides (no dark UI) ---
-st.markdown(
+# --------------------------------------------------------------------------------------
+# App
+# --------------------------------------------------------------------------------------
+
+
+# --------------------------------------------------------------------------------------
+# Helpers
+# --------------------------------------------------------------------------------------
+def is_nan(x) -> bool:
+    return isinstance(x, float) and math.isnan(x)
+# --- Domain/category ranking for default sort (Bally-first) ---
+
+def strip_www(d: str) -> str:
+    s = str(d or "")
+    return s[4:] if s.startswith("www.") else s
+
+
+
+def weighted_discount_by_domain_category(df: pd.DataFrame) -> pd.DataFrame:
+    # keep only rows with both prices and not OOS
+    mr = df["m_retail_price"].apply(to_num)
+    ms = df["m_sale_price"].apply(to_num)
+    mask_valid = (~df["oos_match"]) & mr.notna() & ms.notna()
+
+    t = df[mask_valid].copy()
+    t["retail"] = mr[mask_valid]
+    t["sale"]   = ms[mask_valid]
+    t["disc_amt"]   = (t["retail"] - t["sale"]).clip(lower=0)
+    t["disc_flag"]  = t["disc_amt"] > 0
+
+    # sum only discounted retail and amounts (price-weighted)
+    t["retail_disc_only"] = np.where(t["disc_flag"], t["retail"], 0.0)
+    t["disc_amt_only"]    = np.where(t["disc_flag"], t["disc_amt"], 0.0)
+
+    g = (
+        t.groupby(["domain", "category"], dropna=False)
+         .agg(
+             Rows=("disc_flag", "size"),
+             Discounted=("disc_flag", "sum"),
+             SumRetail=("retail_disc_only", "sum"),
+             SumDisc=("disc_amt_only", "sum"),
+         )
+         .reset_index()
+    )
+
+    g["PctWeighted"] = np.where(g["SumRetail"] > 0, 100.0 * g["SumDisc"] / g["SumRetail"], np.nan)
+    # keep only cells that actually have discounted SKUs
+    g = g[g["Discounted"] > 0].copy()
+
+    g["domain_clean"] = g["domain"].str.replace(r"^www\.", "", regex=True)
+    return g
+
+def _prep_match_discount_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Prep rows for match-side discount analytics."""
+    t = df.copy()
+    t["mr"] = t["m_retail_price"].apply(to_num)
+    t["ms"] = t["m_sale_price"].apply(to_num)
+    t["oos"] = t["m_season_tag"].apply(is_oos)
+    # discounted if not OOS, both prices exist, and sale < retail
+    t["disc"] = (~t["oos"]) & t["mr"].notna() & t["ms"].notna() & (t["ms"] < t["mr"])
+    # price-weighted discount % for discounted rows only
+    t["disc_pct"] = np.where(t["disc"], (t["mr"] - t["ms"]) / t["mr"] * 100.0, np.nan)
+    t["site"] = t["domain"].map(strip_www)
+    t["category"] = t["category"].fillna("Unknown")
+    return t[["domain", "site", "category", "mr", "ms", "disc", "disc_pct"]]
+
+def cat_domain_share_discount(df: pd.DataFrame) -> pd.DataFrame:
     """
-    <style>
-      :root {
-        --bg: #FAFAFA;
-        --card: #FFFFFF;
-        --ink: #111111;
-        --muted: #6B7280;
-        --line: #E5E7EB;
-        --accent: #CC0000;           /* price accent */
-        --accent-2: #0F766E;         /* green-ish for cheaper badges if needed */
-        --pill: #EEF2FF;
-        --pill-text: #1F2937;
-        --badge: #F3F4F6;
-        --badge-text: #111111;
-        --strike: #9CA3AF;
-        --oos: #B91C1C;
-      }
-      .stApp { background: var(--bg); color: var(--ink); }
-      .app-subtle { color: var(--muted); font-size: 13px; }
-
-      /* section title spacing */
-      .section { margin-top: 0.75rem; margin-bottom: .25rem; }
-
-      /* anchor tabs header tweak */
-      .stTabs [data-baseweb="tab"] { font-weight: 600; }
-
-      /* Grid that holds comparison cards (two comps per row) */
-      .comp-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(460px, 1fr));
-        gap: 20px;
-      }
-
-      /* A comparison card houses the two tiles */
-      .comp-card {
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 12px;
-        box-shadow: 0 2px 10px rgba(17,17,17,.04);
-      }
-      .comp-head { font-size: 13px; color: var(--muted); margin-bottom: .25rem; }
-
-      /* Two product tiles side-by-side */
-      .tiles {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-
-      /* Entire tile is clickable */
-      .tile-link { text-decoration: none; color: inherit; display: block; }
-      .tile {
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        overflow: hidden;
-        transition: transform .12s ease, box-shadow .12s ease;
-      }
-      .tile:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(17,17,17,.06); }
-
-      /* preserved aspect ratio like Bally cards */
-      .img-wrap {
-        width: 100%;
-        aspect-ratio: 4/5;
-        background: #F5F5F5;
-        display: grid;
-        place-items: center;
-      }
-      .img-wrap img {
-        max-width: 92%;
-        max-height: 92%;
-        object-fit: contain;
-        display: block;
-      }
-
-      .panel-body { padding: 12px 14px 14px 14px; }
-      .site-label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
-      .title { font-size: 16px; line-height: 1.25; font-weight: 600; min-height: 40px; }
-      .badges { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-      .badge {
-        background: var(--badge);
-        color: var(--badge-text);
-        border-radius: 999px;
-        padding: 2px 8px;
-        font-size: 12px;
-        border: 1px solid var(--line);
-      }
-      .badge.oos {
-        background: #FEE2E2; color: var(--oos); border-color: #FECACA;
-      }
-      .price-line { margin-top: 8px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-      .strike { color: var(--strike); text-decoration: line-through; }
-      .price-accent { color: var(--accent); font-weight: 700; }
-      .pct-pill {
-        background: var(--pill); color: var(--pill-text);
-        border-radius: 999px; font-size: 12px; padding: 2px 8px;
-      }
-
-      .diff-bar { margin-top: 10px; font-size: 13px; color: var(--muted); }
-      .diff-pos { color: var(--accent); font-weight: 600; }
-      .diff-neg { color: var(--accent-2); font-weight: 600; }
-
-      /* hyperlink tables in analytics */
-      .tbl-note { font-size: 12px; color: var(--muted); margin-top: .25rem; }
-      .kpi { font-size: 26px; font-weight: 700; }
-      .kpi-sub { font-size: 13px; color: var(--muted); }
-
-      /* pagination strip */
-      .pager { display: flex; gap: 8px; align-items: center; }
-      .pager input { width: 70px; text-align: center; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# ------------------------------
-# Utilities
-# ------------------------------
-def to_number(x) -> Optional[float]:
-    """Robust parse of AUD numeric fields (already in AUD). Returns float or np.nan."""
-    if x is None:
-        return np.nan
-    if isinstance(x, (int, float, np.number)):
-        return float(x)
-    s = str(x).strip()
-    if s == "" or s.lower() == "na" or s.lower() == "none":
-        return np.nan
-    # remove currency labels and commas/spaces
-    s = re.sub(r"[^\d.\-]", "", s)
-    try:
-        return float(s)
-    except Exception:
-        return np.nan
-
-def final_price(row: pd.Series, side: str) -> Optional[float]:
-    """Final price = sale if present else retail. Returns np.nan if both missing or OOS (match only)."""
-    if side == "m":
-        # Out of stock tag on match side ⇒ no final price
-        tag = str(row.get("m_season_tag") or "").lower()
-        if "out of stock" in tag or "out-of-stock" in tag or "oos" in tag:
-            return np.nan
-    sale = to_number(row.get(f"{side}_sale_price"))
-    retail = to_number(row.get(f"{side}_retail_price"))
-    if not np.isnan(sale):
-        return sale
-    return retail if not np.isnan(retail) else np.nan
-
-def pct_discount(retail, sale) -> Optional[float]:
-    r = to_number(retail); s = to_number(sale)
-    if np.isnan(r) or np.isnan(s) or r <= 0 or s >= r:
-        return np.nan
-    return round((r - s) * 100.0 / r, 2)
-
-def fmt_money(x) -> str:
-    v = to_number(x)
-    if np.isnan(v):
-        return "—"
-    return f"AUD$ {v:,.2f}"
-
-def linkify(url: str, text: str) -> str:
-    if not url or str(url).strip().lower() in ("nan", "na", "none"):
-        return text
-    safe = str(url).replace('"', "%22")
-    return f'<a href="{safe}" target="_blank" rel="noopener noreferrer">{text}</a>'
-
-def clean_domain(x) -> str:
-    s = str(x or "").strip()
-    if s.lower() in ("", "nan", "na", "none"):
-        return "NA"
-    return s
-
-def site_priority(domain: str) -> int:
-    d = clean_domain(domain).lower()
-    if d == "www.bally.com.au": return 0
-    if d.startswith("www.bally."): return 1
-    if d.startswith("bally"): return 1
-    if d == "www.farfetch.com": return 2
-    if d == "na": return 99
-    if d == "na": return 99
-    if d == "nan": return 99
-    if d == "": return 99
-    return 3
-
-# ------------------------------
-# Data loading & preparation
-# ------------------------------
-@st.cache_data(show_spinner=False)
-def load_data(csv_path: str) -> pd.DataFrame:
-    df = pd.read_csv(csv_path, dtype=str)
-    # Normalize columns that must exist even if missing
-    for col in [
-        "c_link","domain","category","c_title","c_retail_price","c_sale_price","c_image-src",
-        "c_season_tag","c_product_url","c_product_id","matchlink","m_title","m_retail_price",
-        "m_sale_price","m_image-src","m_product_id","m_season_tag"
-    ]:
-        if col not in df.columns:
-            df[col] = ""
-
-    # Clean types
-    df["domain"] = df["domain"].apply(clean_domain)
-    df["c_final"] = df.apply(lambda r: final_price(r, "c"), axis=1)
-    df["m_final"] = df.apply(lambda r: final_price(r, "m"), axis=1)
-    df["has_match"] = (df["domain"].str.lower() != "na") & (df["matchlink"].astype(str).str.len() > 2)
-
-    # Numeric price columns
-    for p in ["c_retail_price","c_sale_price","m_retail_price","m_sale_price","c_final","m_final"]:
-        df[p] = df[p].apply(to_number)
-
-    # Differences (only when both finals present)
-    both = (~df["c_final"].isna()) & (~df["m_final"].isna())
-    df["diff"] = np.where(both, df["c_final"] - df["m_final"], np.nan)
-
-    # Discounts (per-row)
-    df["c_pct_disc"] = df.apply(lambda r: pct_discount(r["c_retail_price"], r["c_sale_price"]), axis=1)
-    df["m_pct_disc"] = df.apply(lambda r: pct_discount(r["m_retail_price"], r["m_sale_price"]), axis=1)
-
-    # Simple badges
-    df["c_tag"] = df["c_season_tag"].fillna("").astype(str)
-    df["m_tag"] = df["m_season_tag"].fillna("").astype(str)
-
-    # Status
-    df["m_is_oos"] = df["m_tag"].str.lower().str.contains("out of stock")
-    df["site_priority"] = df["domain"].apply(site_priority)
-
-    # Season universe for filters
-    seasons = (
-        pd.Series(pd.concat([df["c_tag"], df["m_tag"]], ignore_index=True).unique())
-        .dropna().astype(str).str.strip()
-    )
-    seasons = seasons[seasons != ""].tolist()
-    return df, sorted(set(seasons))
-
-# ------------------------------
-# Analytics helpers
-# ------------------------------
-def group_site_summary(df: pd.DataFrame) -> pd.DataFrame:
-    d = df.copy()
-    mask = (~d["c_final"].isna()) & (~d["m_final"].isna()) & (~d["m_is_oos"])
-    g = (
-        d[mask]
-        .groupby("domain", dropna=False, as_index=False)
-        .agg(
-            Rows=("diff","count"),
-            Average_Difference=("diff","mean"),
-            Median_Difference=("diff","median"),
-            Pct_Cheaper_Cettire=("diff", lambda s: 100.0 * np.mean(d.loc[s.index, "c_final"] < d.loc[s.index, "m_final"]))
-        )
-        .sort_values("Rows", ascending=False)
-    )
-    g["Average_Difference"] = g["Average_Difference"].round(2)
-    g["Median_Difference"] = g["Median_Difference"].round(2)
-    g["Pct_Cheaper_Cettire"] = g["Pct_Cheaper_Cettire"].round(1)
-    return g
-
-def bally_au_by_category(df: pd.DataFrame) -> pd.DataFrame:
-    d = df.copy()
-    d = d[d["domain"].str.lower() == "www.bally.com.au"]
-    mask = (~d["c_final"].isna()) & (~d["m_final"].isna()) & (~d["m_is_oos"])
-    g = (
-        d[mask]
-        .groupby("category", as_index=False)
-        .agg(
-            Rows=("diff","count"),
-            Average_Difference=("diff","mean"),
-            Median_Difference=("diff","median"),
-            Pct_Cheaper_Cettire=("diff", lambda s: 100.0 * np.mean(d.loc[s.index, "c_final"] < d.loc[s.index, "m_final"]))
-        )
-        .sort_values("Rows", ascending=False)
-    )
-    for col in ["Average_Difference","Median_Difference","Pct_Cheaper_Cettire"]:
-        g[col] = g[col].round(2)
-    return g
-
-def top_discrepancies(df: pd.DataFrame, n=10) -> pd.DataFrame:
-    d = df.copy()
-    mask = (d["domain"].str.lower() == "www.bally.com.au") & (~d["m_is_oos"]) & (~d["diff"].isna())
-    d = d[mask].copy()
-    d["absdiff"] = d["diff"].abs()
-    d = d.sort_values("absdiff", ascending=False).head(n)
-    out = pd.DataFrame({
-        "category": d["category"],
-        "domain": d["domain"],
-        "c_title": d["c_title"],
-        "m_title": d["m_title"],
-        "Cettire final (AUD)": d["c_final"].map(lambda x: f"{x:,.2f}"),
-        "Match final (AUD)": d["m_final"].map(lambda x: f"{x:,.2f}"),
-        "Diff (Cettire - Match)": d["diff"].map(lambda x: f"{x:,.2f}"),
-        "Cettire URL": d["c_link"].apply(lambda u: linkify(u, "Open")),
-        "Match URL": d["matchlink"].apply(lambda u: linkify(u, "Open")),
-    })
+    Share of SKUs discounted (%), by (domain, category).
+    Counts all rows; those not discounted (including missing price data or OOS) count as 0.
+    """
+    t = _prep_match_discount_rows(df)
+    g = t.groupby(["domain", "site", "category"], dropna=False)["disc"]
+    share = g.mean().mul(100.0).reset_index().rename(columns={"disc": "PctDiscounted"})
+    # also keep the discounted count for labels/tooltip
+    n_disc = g.sum().reset_index().rename(columns={"disc": "DiscCount"})
+    out = share.merge(n_disc, on=["domain", "site", "category"], how="left")
     return out
 
-def discounting_summary(df: pd.DataFrame) -> pd.DataFrame:
-    d = df.copy()
-    # Percent rows with sale < retail (both present). Match excludes OOS.
-    d["c_disc_row"] = (~d["c_sale_price"].isna()) & (~d["c_retail_price"].isna()) & (d["c_sale_price"].apply(to_number) < d["c_retail_price"].apply(to_number))
-    d["m_disc_row"] = (~d["m_sale_price"].isna()) & (~d["m_retail_price"].isna()) & (~d["m_is_oos"]) & (d["m_sale_price"].apply(to_number) < d["m_retail_price"].apply(to_number))
+def cat_domain_price_weighted_avg(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Price-weighted average discount (%) among discounted SKUs only:
+      sum(mr - ms) / sum(mr) * 100  within each (domain, category).
+    """
+    t = _prep_match_discount_rows(df)
+    d = t[t["disc"]].copy()
+    if d.empty:
+        return pd.DataFrame(columns=["domain", "site", "category", "AvgDiscount", "DiscCount"])
+    grp = d.groupby(["domain", "site", "category"], dropna=False)
+    avg = (grp.apply(lambda g: ((g["mr"] - g["ms"]).sum() / g["mr"].sum()) * 100.0)
+              .reset_index(name="AvgDiscount"))
+    # discounted SKU count for context
+    avg["DiscCount"] = grp.size().values
+    return avg
 
-    g = (
-        d.groupby("domain", dropna=False, as_index=False)
-        .agg(
-            Rows=("domain","count"),
-            Pct_Cettire_Discount=("c_disc_row", lambda s: 100.0 * s.mean() if len(s) else 0.0),
-            Pct_Match_Discount=("m_disc_row", lambda s: 100.0 * s.mean() if len(s) else 0.0),
+
+def domain_group_rank(domain: str) -> int:
+    """
+    0 = www.bally.com.au
+    1 = other bally.* domains
+    2 = other retailers (e.g., davidjones, etc.)
+    3 = farfetch (always last)
+    """
+    d = (domain or "").lower()
+    if "farfetch.com" in d:
+        return 3
+    if "www.bally.com.au" in d:
+        return 0
+    # any other Bally site
+    if "bally." in d or "ballyofswitzerland" in d:
+        return 1
+    return 2  # other partners
+
+def category_rank_for_bally_au(category: str) -> int:
+    """
+    Inside Bally AU only: Bags -> 0, Shoes -> 1, others -> 2.
+    """
+    c = (category or "").strip().lower()
+    if c == "bags":
+        return 0
+    if c == "shoes":
+        return 1
+    return 2
+
+def s(x) -> str:
+    """Safe string for HTML/text."""
+    if x is None or is_nan(x):
+        return ""
+    return str(x)
+
+def to_num(x) -> float | None:
+    """Robust numeric caster. Returns None if not parseable."""
+    if x is None or is_nan(x):
+        return None
+    if isinstance(x, (int, float)) and not isinstance(x, bool):
+        return float(x)
+    try:
+        cleaned = (
+            str(x)
+            .replace("AUD", "")
+            .replace("$", "")
+            .replace("€", "")
+            .replace("£", "")
+            .replace("AED", "")
+            .replace(",", "")
+            .strip()
         )
-        .sort_values("Rows", ascending=False)
-    )
-    g["Pct_Cettire_Discount"] = g["Pct_Cettire_Discount"].round(2)
-    g["Pct_Match_Discount"] = g["Pct_Match_Discount"].round(2)
-    return g
+        if cleaned == "" or cleaned.lower() == "na":
+            return None
+        return float(cleaned)
+    except Exception:
+        return None
 
-# ------------------------------
-# Tile / card rendering
-# ------------------------------
+def money(x: float | None) -> str:
+    if x is None:
+        return "—"
+    return f"AUD$ {x:,.2f}"
+
+def pick_final(sale, retail) -> float | None:
+    s_val = to_num(sale)
+    r_val = to_num(retail)
+    if s_val is not None:
+        return s_val
+    if r_val is not None:
+        return r_val
+    return None
+
+def discount_percent(sale, retail) -> float | None:
+    s_val = to_num(sale)
+    r_val = to_num(retail)
+    if s_val is None or r_val is None:
+        return None
+    if s_val >= r_val:
+        return None
+    return max(0.0, (r_val - s_val) / r_val * 100.0)
+
+def is_oos(tag: str | None) -> bool:
+    return s(tag).strip().lower() in {"out of stock", "oos"}
+
+SITE_ORDER = {
+    "www.bally.com.au": 0,
+    "www.bally.ch": 1,
+    "www.bally.ae": 2,
+    "www.bally.eu": 3,
+    "www.davidjones.com": 4,
+    "www.farfetch.com": 5,
+    "ballyofswitzerland.tw": 6,
+}
+
+def site_priority(domain) -> int:
+    d = s(domain).lower()
+    for k, v in SITE_ORDER.items():
+        if k in d:
+            return v
+    return 999
+
+def diff_pill_html(diff: float | None) -> str:
+    if diff is None or (isinstance(diff, float) and pd.isna(diff)):
+        return ""
+    color = "red" if diff < 0 else "green" if diff > 0 else ""
+    sign  = "-" if diff < 0 else "+" if diff > 0 else ""
+    return f'<span class="price-pill {color}">{sign}AUD$ {abs(diff):,.2f}</span>'
+
+# --------------------------------------------------------------------------------------
+# Load & enrich
+# --------------------------------------------------------------------------------------
+@st.cache_data(show_spinner=False)
+def load_data(csv_path: str) -> pd.DataFrame:
+    df = pd.read_csv(
+        csv_path,
+        dtype=str,
+        keep_default_na=True,
+        na_values=["", "NA", "NaN", "nan"]
+    )
+
+    df.columns = [c.strip() for c in df.columns]
+
+    # finals
+    df["c_final"] = [pick_final(r.get("c_sale_price"), r.get("c_retail_price")) for _, r in df.iterrows()]
+    df["m_final"] = [
+        None if is_oos(r.get("m_season_tag")) else pick_final(r.get("m_sale_price"), r.get("m_retail_price"))
+        for _, r in df.iterrows()
+    ]
+    df["oos_match"] = df["m_season_tag"].apply(is_oos)
+
+    # price diff: Cettire – Match
+    def diff_row(row):
+        cf, mf = row["c_final"], row["m_final"]
+        if cf is None or mf is None:
+            return None
+        return cf - mf
+    df["diff_c_minus_m"] = df.apply(diff_row, axis=1)
+
+    # season union (for filtering)
+    def season_union(row):
+        a, b = s(row.get("c_season_tag")).strip(), s(row.get("m_season_tag")).strip()
+        if a and b and a.lower() != b.lower():
+            return f"{a} / {b}"
+        return a or b or "No tag"
+    df["season_union"] = df.apply(season_union, axis=1)
+
+    # site priority
+    df["site_priority"] = df["domain"].apply(site_priority)
+
+    # fill text fields (avoid NaN in HTML)
+    for c in [
+        "c_title", "c_image-src", "c_product_url", "c_link", "c_season_tag",
+        "m_title", "m_image-src", "matchlink", "m_season_tag", "category", "domain"
+    ]:
+        if c in df.columns:
+            df[c] = df[c].fillna("")
+
+    return df
+
+# --------------------------------------------------------------------------------------
+# Styling
+# --------------------------------------------------------------------------------------
+CARD_CSS = """
+<style>
+.app-wrap { max-width: 1400px; margin: 0 auto; }
+
+.count-pill { font-size:12px; color:#555; padding:2px 8px; border-radius:999px; background:#F1F3F5; display:inline-block; }
+
+.comp-row { display:flex; gap:24px; margin-bottom:18px; }
+.comp-tile { flex: 1; background:#fff; border:1px solid #e9ecef; border-radius:16px; box-shadow:0 1px 2px rgba(16,24,40,.06); overflow:hidden; }
+.comp-tile a { color: inherit; text-decoration: none; display:block; }
+.comp-body { padding:14px 16px; }
+
+.img-wrap { height: 260px; display:flex; align-items:center; justify-content:center; background:#F3F4F7; }
+.img-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+.site-label { font-size: 12px; color:#6b7280; margin-bottom:4px; }
+.title { font-weight:600; font-size:16px; line-height:1.2; margin:4px 0 10px 0; color:#0f172a; }
+.title a { text-decoration: underline; }
+
+.badge { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
+
+.price-line { display:flex; align-items:baseline; gap:10px; }
+.strike { color:#94a3b8; text-decoration: line-through; }
+.price-accent { color:#111827; font-weight:700; }
+.pct-pill { font-size:12px; border-radius:8px; padding:2px 6px; background:#fef3f2; color:#b42318; border:1px solid #fecdca; }
+
+.diff-note { font-size:12px; color:#475569; margin:8px 0 0 2px; }
+
+.oos { font-weight:700; color:#b42318; }
+.dim { color:#94a3b8; }
+
+/* price diff pill colours */
+.price-pill {display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;line-height:18px}
+.price-pill.red   {background:#FEE2E2;border:1px solid #FCA5A5;color:#B42318;}   /* Cettire cheaper */
+.price-pill.green {background:#E6F4EA;border:1px solid #B7E1C0;color:#1B5E20;}   /* Cettire higher  */
+</style>
+"""
+
+# --------------------------------------------------------------------------------------
+# Product tile HTML (single side)
+# --------------------------------------------------------------------------------------
 def tile_html(
-    title: str,
-    img: str,
     site_label: str,
-    season_tag: str,
-    retail: Optional[float],
-    sale: Optional[float],
-    final_price_val: Optional[float],
-    url: str,
-    is_oos: bool = False,
+    url: str | None,
+    title: str | None,
+    img: str | None,
+    retail: float | None,
+    sale: float | None,
+    season: str | None,
+    oos: bool = False
 ) -> str:
-    retail_s = fmt_money(retail)
-    sale_s = fmt_money(sale)
-    final_s = fmt_money(final_price_val)
-    disc = pct_discount(retail, sale)
-    badge = ""
-    if season_tag:
-        tag = season_tag.strip()
-        badge = f'<span class="badge">{tag}</span>'
+    t = s(title)
+    link = s(url) or "#"
+    image = s(img)
+    badge = f'<span class="badge" title="{s(season)}">{s(season)}</span>' if s(season) else ""
 
-    if is_oos:
-        badge += '<span class="badge oos">OOS</span>'
+    final = pick_final(sale, retail)
+    strike_html = ""
+    price_html = ""
+    pct_html = ""
 
-    # price block
-    price_bits = []
-    if is_oos:
-        price_bits.append('<span class="price-accent">—</span>')
+    if oos:
+        price_html = '<span class="oos">Out of stock</span>'
     else:
-        # show strike only if sale < retail
-        if not np.isnan(to_number(sale)) and not np.isnan(to_number(retail)) and to_number(sale) < to_number(retail):
-            price_bits.append(f'<span class="strike">{retail_s}</span>')
-            price_bits.append(f'<span class="price-accent">{sale_s}</span>')
-            if disc is not None and not np.isnan(disc):
-                price_bits.append(f'<span class="pct-pill">-{disc:.0f}%</span>')
+        if final is not None:
+            d = discount_percent(sale, retail)
+            if d is not None:
+                # sale < retail
+                strike_html = f'<span class="strike">{money(to_num(retail))}</span>'
+                price_html = f'<span class="price-accent">{money(final)}</span>'
+                pct_html = f'<span class="pct-pill">-{d:.0f}%</span>'
+            else:
+                price_html = f'<span class="price-accent">{money(final)}</span>'
         else:
-            # just final
-            price_bits.append(f'<span class="price-accent">{final_s}</span>')
+            price_html = '<span class="dim">—</span>'
 
-    return f"""
-      <a class="tile-link" href="{url or '#'}" target="_blank" rel="noopener noreferrer">
-        <div class="tile">
-          <div class="img-wrap">
-            <img src="{img or ''}" alt="{(title or '').replace('"','')}" loading="lazy" />
-          </div>
-          <div class="panel-body">
-            <div class="site-label">{site_label}</div>
-            <div class="title">{(title or '').strip()}</div>
-            <div class="badges">{badge}</div>
-            <div class="price-line">{' '.join(price_bits)}</div>
-          </div>
-        </div>
+    body = f"""
+    <div class="panel-body comp-body">
+      <div class="site-label">{s(site_label)}</div>
+      <div class="title">{s(t)}</div>
+      {badge}
+      <div class="price-line">{strike_html}{price_html}{pct_html}</div>
+    </div>
+    """
+
+    img_block = f"""
+    <div class="img-wrap">
+        <img src="{image}" alt="{s(t)}" loading="lazy" />
+    </div>
+    """
+
+    # Entire tile is a link
+    html = f"""
+    <div class="comp-tile">
+      <a href="{link}" target="_blank" rel="noopener">
+        {img_block}
+        {body}
       </a>
+    </div>
     """
+    return html
 
-def comp_card_html(row: pd.Series) -> str:
-    # Left (Cettire)
-    c_tile = tile_html(
-        title=row.get("c_title"),
-        img=row.get("c_image-src"),
-        site_label="Cettire",
-        season_tag=row.get("c_tag"),
-        retail=row.get("c_retail_price"),
-        sale=row.get("c_sale_price"),
-        final_price_val=row.get("c_final"),
-        url=row.get("c_link") or row.get("c_product_url"),
-        is_oos=False,
-    )
-    # Right (Match)
-    is_oos = bool(row.get("m_is_oos"))
-    m_title = row.get("m_title") or ("No match" if not row.get("has_match") else row.get("m_title"))
-    m_img = row.get("m_image-src") if row.get("has_match") else ""
-    m_url = row.get("matchlink") if row.get("has_match") else "#"
-    m_tile = tile_html(
-        title=m_title,
-        img=m_img,
-        site_label=row.get("domain"),
-        season_tag=row.get("m_tag"),
-        retail=row.get("m_retail_price"),
-        sale=row.get("m_sale_price"),
-        final_price_val=row.get("m_final"),
-        url=m_url,
-        is_oos=is_oos,
-    )
+# --------------------------------------------------------------------------------------
+# One comparison row (left Cettire, right Matched)
+# --------------------------------------------------------------------------------------
+def comp_card_html(r: pd.Series) -> str:
+    # left (Cettire)
+    c_title = r.get("c_title")
+    c_img = r.get("c_image-src")
+    c_retail = to_num(r.get("c_retail_price"))
+    c_sale = to_num(r.get("c_sale_price"))
+    c_url = r.get("c_product_url") or r.get("c_link")  # prefer product_url, fallback to c_link
+    c_season = r.get("c_season_tag")
 
-    # Diff label
-    diff = row.get("diff")
-    if diff is None or np.isnan(diff):
-        diff_label = '<span class="app-subtle">Diff: —</span>'
-    else:
-        cls = "diff-pos" if diff > 0 else "diff-neg"
-        diff_label = f'Diff (Cettire − Match): <span class="{cls}">AUD$ {diff:,.2f}</span>'
+    # right (match)
+    m_title = r.get("m_title")
+    m_img = r.get("m_image-src")
+    m_retail = to_num(r.get("m_retail_price"))
+    m_sale = to_num(r.get("m_sale_price"))
+    m_url = r.get("matchlink")
+    m_season = r.get("m_season_tag")
+    m_oos = bool(r.get("oos_match"))
 
-    return f"""
-      <div class="comp-card">
-        <div class="tiles">
-          {c_tile}
-          {m_tile}
-        </div>
-        <div class="diff-bar">{diff_label}</div>
-      </div>
+    left = tile_html("Cettire", c_url, c_title, c_img, c_retail, c_sale, c_season, oos=False)
+    right = tile_html(s(r.get("domain") or "Match"), m_url, m_title, m_img, m_retail, m_sale, m_season, oos=m_oos)
+
+    # difference note (red/green pill)
+    diff = r.get("diff_c_minus_m")
+    diff_line = ""
+    if diff is not None and (not m_oos) and r.get("m_final") is not None and r.get("c_final") is not None:
+        note = f'Diff (Cettire – Match): {diff_pill_html(float(diff))}'
+        diff_line = f'<div class="diff-note">{note}</div>'
+
+    row = f"""
+    <div class="comp-row">
+      {left}
+      {right}
+    </div>
+    {diff_line}
     """
+    return row
 
-# ------------------------------
-# App body
-# ------------------------------
-st.title("Bally products on Cettire")
-st.caption("Comprehensive Products analysis by AU E-Com")
-st.caption("Data scraped: 1–4 Oct 2025 (AUD). Internal use only.")
+# --------------------------------------------------------------------------------------
+# Filters UI (comparison tab)
+# --------------------------------------------------------------------------------------
 
-tabs = st.tabs(["📊 Analytics", "🧾 Comparison"])
+# --------------------------------------------------------------------------------------
+# Filters UI (comparison tab)
+# --------------------------------------------------------------------------------------
 
-# Load data
-df, season_universe = load_data("match_final.csv")
+def comparison_filters(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+    st.subheader("Products", divider=False)
+    st.caption("Use the filters on the left. Pagination shows **25 comparisons per page**.")
 
-# ========= ANALYTICS =========
-with tabs[0]:
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.metric("Total rows", f"{len(df):,}")
-    with c2:
-        st.metric("Cettire SKUs", f"{len(df):,}")
-    with c3:
-        st.metric("Matched rows", f"{int(df['has_match'].sum()):,}")
-    with c4:
-        st.metric("OOS (match)", f"{int(df['m_is_oos'].sum()):,}")
+    # ---- safe accessor ----
+    def col(name: str) -> pd.Series:
+        return df[name] if name in df.columns else pd.Series(dtype=object)
 
-    st.markdown("### Site-wise comparison")
-    st.caption("Average Difference = mean(Cettire final − Match final) using rows with both prices and non-OOS. Positive means Cettire is more expensive; negative means cheaper.")
+    # ---- session defaults so “All” is selected on first load ----
+    if "flt_cats" not in st.session_state:    st.session_state.flt_cats = ["All"]
+    if "flt_sites" not in st.session_state:   st.session_state.flt_sites = ["All"]
+    if "flt_seasons" not in st.session_state: st.session_state.flt_seasons = ["All"]
 
-    g_site = group_site_summary(df)
-    st.dataframe(g_site, use_container_width=True, hide_index=True)
-    st.download_button("Download site summary (CSV)", g_site.to_csv(index=False).encode("utf-8"), "site_summary.csv", "text/csv")
+    # ---- helper: expand “All” ----
+    def expand_all(selected: list[str], all_vals: list[str]) -> list[str]:
+        return all_vals if (not selected) or ("All" in selected) else selected
 
-    st.markdown("### Bally AU – category difference (select site)")
-    st.caption("Per-category average and median difference for **www.bally.com.au**. Numeric panels exclude OOS and rows without both final prices.")
-    g_cat = bally_au_by_category(df)
-    st.dataframe(g_cat, use_container_width=True, hide_index=True)
-    st.download_button("Download bally.com.au category summary (CSV)", g_cat.to_csv(index=False).encode("utf-8"), "bally_au_category_summary.csv", "text/csv")
+    with st.sidebar:
+        st.markdown("### Filters")
 
-    st.markdown("### Top price discrepancies (Bally AU match)")
-    st.caption("Largest absolute differences where the matched site is **www.bally.com.au**, excluding OOS.")
-    topn = top_discrepancies(df, n=10)
-    # render as clickable HTML table (escape disabled)
-    st.markdown(topn.to_html(index=False, escape=False), unsafe_allow_html=True)
-    st.download_button("Download discrepancies (CSV)", topn.drop(columns=["Cettire URL","Match URL"]).to_csv(index=False).encode("utf-8"), "top_discrepancies.csv", "text/csv")
+        cats    = sorted([c for c in col("category").dropna().unique().tolist() if c])
+        sites   = sorted([d for d in col("domain").dropna().unique().tolist() if d])
+        seasons = sorted([t for t in col("season_union").dropna().unique().tolist() if t])
 
-    st.markdown("### Discounting summary (by site)")
-    st.caption("Cettire discount = % where sale < retail on Cettire; Match discount = % where sale < retail on matched site (excludes OOS).")
-    disc = discounting_summary(df)
-    st.dataframe(disc, use_container_width=True, hide_index=True)
-    st.download_button("Download discounting (CSV)", disc.to_csv(index=False).encode("utf-8"), "discounting_by_site.csv", "text/csv")
+        # Multiselects with an explicit “All” option
+        sel_cats_raw = st.multiselect(
+            "Category", ["All", *cats], key="flt_cats", default=st.session_state.flt_cats
+        )
+        sel_sites_raw = st.multiselect(
+            "Matched site", ["All", *sites], key="flt_sites", default=st.session_state.flt_sites
+        )
+        sel_seasons_raw = st.multiselect(
+            "Season tag (either side)", ["All", *seasons], key="flt_seasons", default=st.session_state.flt_seasons
+        )
 
-# ========= COMPARISON =========
-with tabs[1]:
-    st.markdown("#### Products")
+        sel_cats    = expand_all(sel_cats_raw, cats)
+        sel_sites   = expand_all(sel_sites_raw, sites)
+        sel_seasons = expand_all(sel_seasons_raw, seasons)
 
-    # --- Filters sidebar-like block ---
-    fcol, pcol, _ = st.columns([1.1, 3, 0.1])
-
-    with fcol:
-        st.markdown("**Filters**")
-
-        # Category
-        cats = sorted([c for c in df["category"].dropna().astype(str).unique().tolist() if c.strip() != ""])
-        sel_cats = st.multiselect("Category", options=cats, default=cats)
-
-        # Matched site
-        sites = sorted(df["domain"].dropna().astype(str).unique().tolist(), key=site_priority)
-        sel_sites = st.multiselect("Matched site", options=sites, default=sites)
-
-        # Season tag (either side)
-        sel_seasons = st.multiselect("Season tag (either side)", options=sorted(season_universe), default=sorted(season_universe))
-
-        include_na = st.checkbox("Include NA / OOS", value=True)
-
-        st.markdown("**Price filter (Cettire final)**")
-        bucket = st.selectbox("Price bucket", ["All","0–500","500–1,000","1,000–2,000","2,000–4,000","4,000+"])
-        manual_min = st.text_input("Manual min (AUD)", "", placeholder="leave blank")
-        manual_max = st.text_input("Manual max (AUD)", "", placeholder="leave blank")
-
-        sort_mode = st.selectbox("Sort", [
-            "Max price diff (abs desc)",
+        st.markdown("### Sorting")
+        sort_options = [
+            "Default (Bally-first)",
+            "Max price diff",
             "Cettire final (low → high)",
             "Cettire final (high → low)",
             "Match final (low → high)",
             "Match final (high → low)",
-            "Site priority, then max diff",
-        ])
+        ]
+        sort_choice = st.selectbox("Sort products by", sort_options, index=0, key="flt_sort")
 
-    # --- Apply filters to df ---
-    d = df.copy()
+        include_na_oos = st.checkbox("Include NA / OOS", value=True, key="flt_naoos")
 
-    # Category
-    d = d[d["category"].astype(str).isin(sel_cats)]
-
-    # Site
-    d = d[d["domain"].astype(str).isin(sel_sites)]
-
-    # Season (either side)
-    if sel_seasons:
-        has_tag = (
-            d["c_tag"].astype(str).isin(sel_seasons) |
-            d["m_tag"].astype(str).isin(sel_seasons)
+        st.markdown("### Price filter (Cettire final)")
+        bucket = st.selectbox(
+            "Price bucket",
+            ["All", "$0–$250", "$250–$500", "$500–$1000", "$1000–$2000", "$2000+"],
+            index=0, key="flt_bucket"
         )
-        d = d[has_tag]
+        cmin, cmax = st.columns(2)
+        with cmin:
+            manual_min = st.text_input("Manual min (AUD)", value="", key="flt_min")
+        with cmax:
+            manual_max = st.text_input("Manual max (AUD)", value="", key="flt_max")
 
-    # NA / OOS toggle
-    if not include_na:
-        d = d[d["has_match"] & (~d["m_is_oos"])]
+    # ---- required columns check (fast bail-out with friendly msg) ----
+    required = {"domain","category","season_union","c_final","m_final","oos_match","diff_c_minus_m","site_priority"}
+    missing = [c for c in required if c not in df.columns]
+    if missing:
+        st.warning("Your file is missing required columns: " + ", ".join(missing))
+        st.info("Please upload a full dataset or adjust your filters.")
+        return df.iloc[0:0], {}
 
-    # Price bucket (Cettire final)
-    min_b, max_b = None, None
-    if bucket != "All":
-        if bucket == "0–500":        min_b, max_b = 0, 500
-        elif bucket == "500–1,000":  min_b, max_b = 500, 1000
-        elif bucket == "1,000–2,000":min_b, max_b = 1000, 2000
-        elif bucket == "2,000–4,000":min_b, max_b = 2000, 4000
-        elif bucket == "4,000+":     min_b, max_b = 4000, None
+    # ---- Apply filters ----
+    dff = df.copy()
+    if sel_cats:    dff = dff[dff["category"].isin(sel_cats)]
+    if sel_sites:   dff = dff[dff["domain"].isin(sel_sites)]
+    if sel_seasons: dff = dff[dff["season_union"].isin(sel_seasons)]
 
-    # Manual min/max override if numbers provided
-    try:
-        if manual_min.strip():
-            min_b = float(re.sub(r"[^\d.]", "", manual_min))
-    except Exception:
-        pass
-    try:
-        if manual_max.strip():
-            max_b = float(re.sub(r"[^\d.]", "", manual_max))
-    except Exception:
-        pass
+    if not include_na_oos:
+        dff = dff[(dff["c_final"].notna()) & (dff["m_final"].notna()) & (~dff["oos_match"])]
 
-    if min_b is not None:
-        d = d[(~d["c_final"].isna()) & (d["c_final"] >= min_b)]
-    if max_b is not None:
-        d = d[(~d["c_final"].isna()) & (d["c_final"] <= max_b)]
+    # Price bucket + manual min/max
+    def in_bucket(v, bkt):
+        if v is None: return False
+        if bkt == "All": return True
+        if bkt == "$0–$250": return v < 250
+        if bkt == "$250–$500": return 250 <= v < 500
+        if bkt == "$500–$1000": return 500 <= v < 1000
+        if bkt == "$1000–$2000": return 1000 <= v < 2000
+        if bkt == "$2000+": return v >= 2000
+        return True
 
-    # Sorting
-    if sort_mode == "Max price diff (abs desc)":
-        d = d.sort_values(by=["diff"], key=lambda s: s.abs(), ascending=False)
-    elif sort_mode == "Cettire final (low → high)":
-        d = d.sort_values(by=["c_final"], ascending=True, na_position="last")
-    elif sort_mode == "Cettire final (high → low)":
-        d = d.sort_values(by=["c_final"], ascending=False, na_position="last")
-    elif sort_mode == "Match final (low → high)":
-        d = d.sort_values(by=["m_final"], ascending=True, na_position="last")
-    elif sort_mode == "Match final (high → low)":
-        d = d.sort_values(by=["m_final"], ascending=False, na_position="last")
-    else:  # Site priority, then max diff
-        d = d.sort_values(by=["site_priority","diff"], key=lambda s: s if s.name!="diff" else s.abs(), ascending=[True, False])
+    dff = dff[dff["c_final"].apply(lambda v: in_bucket(v, bucket))]
 
-    total_results = len(d)
-    per_page = 25   # 25 comparisons = 50 tiles per page
-    total_pages = max(1, math.ceil(total_results / per_page))
+    lo = to_num(manual_min) if manual_min else None
+    hi = to_num(manual_max) if manual_max else None
+    if lo is not None: dff = dff[dff["c_final"].apply(lambda x: (x is not None) and (x >= lo))]
+    if hi is not None: dff = dff[dff["c_final"].apply(lambda x: (x is not None) and (x <= hi))]
 
-    # --- Pagination controls (top) ---
-    with pcol:
-        left, mid, right = st.columns([1,3,2])
-        with left:
-            st.markdown("**Showing**")
-            # numeric page input (1-indexed)
-            pg = st.number_input("", min_value=1, max_value=total_pages, value=1, step=1, label_visibility="collapsed")
-        with mid:
-            st.markdown(f"<div class='app-subtle'>({total_pages} pages)</div>", unsafe_allow_html=True)
-        with right:
-            st.markdown(f"<div class='app-subtle' style='text-align:right'>{total_results:,} results</div>", unsafe_allow_html=True)
+    # ---- Empty / missing-domain guard BEFORE sorting ----
+    if dff.empty or ("domain" not in dff.columns) or dff["domain"].isna().all():
+        st.info("Ciao, no results with the current filters — please select a broader filter :')")
+        return dff.iloc[0:0], {
+            "include_na_oos": include_na_oos, "bucket": bucket,
+            "manual_min": manual_min, "manual_max": manual_max, "sort": sort_choice,
+            "sel_cats": sel_cats_raw, "sel_sites": sel_sites_raw, "sel_seasons": sel_seasons_raw,
+        }
 
-        start = (pg - 1) * per_page
-        end = start + per_page
-        page_rows = d.iloc[start:end].copy()
+    # ---- Sort (Bally-first default) ----
+    if sort_choice == "Default (Bally-first)":
+        tmp = dff.copy()
+        tmp["site_rank"] = tmp["domain"].apply(domain_group_rank)
+        tmp["cat_rank"] = tmp.apply(
+            lambda r: category_rank_for_bally_au(r["category"]) if (r["domain"] == "www.bally.com.au") else 99,
+            axis=1
+        )
+        tmp["gap"] = tmp["diff_c_minus_m"].abs()
+        dff = tmp.sort_values(
+            by=["site_rank", "cat_rank", "gap"],
+            ascending=[True, True, False],
+            na_position="last"
+        )
+    elif sort_choice == "Max price diff":
+        dff = dff.sort_values(["diff_c_minus_m", "site_priority"], ascending=[False, True], na_position="last")
+    elif sort_choice == "Cettire final (low → high)":
+        dff = dff.sort_values(["c_final", "site_priority"], ascending=[True, True], na_position="last")
+    elif sort_choice == "Cettire final (high → low)":
+        dff = dff.sort_values(["c_final", "site_priority"], ascending=[False, True], na_position="last")
+    elif sort_choice == "Match final (low → high)":
+        dff = dff.sort_values(["m_final", "site_priority"], ascending=[True, True], na_position="last")
+    elif sort_choice == "Match final (high → low)":
+        dff = dff.sort_values(["m_final", "site_priority"], ascending=[False, True], na_position="last")
 
-        # Render grid
-        st.markdown("<div class='comp-grid'>", unsafe_allow_html=True)
-        for _, r in page_rows.iterrows():
-            st.markdown(comp_card_html(r), unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+    controls = {
+        "include_na_oos": include_na_oos,
+        "bucket": bucket,
+        "manual_min": manual_min,
+        "manual_max": manual_max,
+        "sort": sort_choice,
+        "sel_cats": sel_cats_raw,
+        "sel_sites": sel_sites_raw,
+        "sel_seasons": sel_seasons_raw,
+    }
+    return dff, controls
+    dff, _ = comparison_filters(df)
+    if dff.empty:
+        st.stop()  # avoid rendering / sorting further when nothing matches
+
+
+# --------------------------------------------------------------------------------------
+# Analytics builders
+# --------------------------------------------------------------------------------------
+def numeric_mask(df: pd.DataFrame) -> pd.Series:
+    return (df["c_final"].notna()) & (df["m_final"].notna()) & (~df["oos_match"])
+def discounting_summary(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    By-domain discounting on both sides + average % discount on the MATCH site.
+    - Pct_Cettire_Discount: share of Cettire rows where c_sale < c_retail
+    - Pct_Match_Discount  : share of MATCH rows where m_sale < m_retail (OOS counted as not discounted)
+    - AvgDisc_Match       : average (m_retail - m_sale)/m_retail*100 over discounted rows (ignores NaN)
+    """
+    t = df.copy()
+
+    # --- Cettire side: discounted? (sale < retail)
+    t["c_disc"] = t.apply(
+        lambda r: (to_num(r.get("c_sale_price")) is not None
+                   and to_num(r.get("c_retail_price")) is not None
+                   and to_num(r.get("c_sale_price")) < to_num(r.get("c_retail_price"))),
+        axis=1
+    )
+
+    # --- Match side: discounted? (sale < retail), treat OOS as not discounted
+    def match_is_discount(row) -> bool:
+        if is_oos(row.get("m_season_tag")):
+            return False
+        ms, mr = to_num(row.get("m_sale_price")), to_num(row.get("m_retail_price"))
+        return (ms is not None) and (mr is not None) and (ms < mr)
+
+    t["m_disc"] = t.apply(match_is_discount, axis=1)
+
+    # --- Match side: discount % for discounted rows; NaN otherwise (so mean ignores them)
+    def match_disc_pct(row):
+        if not row["m_disc"]:
+            return np.nan
+        ms, mr = to_num(row.get("m_sale_price")), to_num(row.get("m_retail_price"))
+        if ms is None or mr is None or mr <= 0:
+            return np.nan
+        return (mr - ms) / mr * 100.0
+
+    t["m_disc_pct"] = t.apply(match_disc_pct, axis=1)
+
+    grp = t.groupby("domain", dropna=False)
+    res = pd.DataFrame({
+        "Rows": grp.size(),
+        "Pct_Cettire_Discount": grp["c_disc"].mean() * 100.0,   # share of SKUs on sale (Cettire)
+        "Pct_Match_Discount":   grp["m_disc"].mean() * 100.0,   # share of SKUs on sale (Match)
+        "AvgDisc_Match":        grp["m_disc_pct"].mean()        # average % discount (Match), discounted rows only
+    }).reset_index()
+
+    return res.sort_values("Rows", ascending=False)
+
+def tidy_for_charts(df: pd.DataFrame) -> pd.DataFrame:
+    """Rows usable for numeric charts: both finals present and match not OOS."""
+    mask = numeric_mask(df)
+    t = df[mask].copy()
+    if t.empty:
+        return t
+    t["Domain"] = t["domain"]
+    t["Category"] = t["category"]
+    t["Diff"] = t["diff_c_minus_m"]
+    t["CettireFinal"] = t["c_final"]
+    t["MatchFinal"] = t["m_final"]
+    t["CettireURL"] = t["c_product_url"].where(t["c_product_url"] != "", t["c_link"])
+    t["MatchURL"] = t["matchlink"]
+    t["CTitle"] = t["c_title"]
+    t["MTitle"] = t["m_title"]
+    return t
+
+def site_summary(df: pd.DataFrame) -> pd.DataFrame:
+    work = df[numeric_mask(df)].copy()
+    if work.empty:
+        return pd.DataFrame(columns=["domain", "Rows", "Average_Difference", "Median_Difference", "Pct_Cheaper_Cettire"])
+    grp = work.groupby("domain", dropna=False)
+    res = pd.DataFrame({
+        "Rows": grp.size(),
+        "Average_Difference": grp["diff_c_minus_m"].mean(),
+        "Median_Difference": grp["diff_c_minus_m"].median(),
+        "Pct_Cheaper_Cettire": grp.apply(lambda g: np.mean(g["c_final"] < g["m_final"]) * 100.0)
+    }).reset_index()
+    return res.sort_values("Rows", ascending=False)
+
+def bally_au_category_summary(df: pd.DataFrame) -> pd.DataFrame:
+    work = df[numeric_mask(df) & (df["domain"].str.contains("www.bally.com.au", na=False))].copy()
+    if work.empty:
+        return pd.DataFrame(columns=["category", "Rows", "Average_Difference", "Median_Difference", "Pct_Cheaper_Cettire"])
+    grp = work.groupby("category", dropna=False)
+    res = pd.DataFrame({
+        "Rows": grp.size(),
+        "Average_Difference": grp["diff_c_minus_m"].mean(),
+        "Median_Difference": grp["diff_c_minus_m"].median(),
+        "Pct_Cheaper_Cettire": grp.apply(lambda g: np.mean(g["c_final"] < g["m_final"]) * 100.0)
+    }).reset_index()
+    return res.sort_values("Rows", ascending=False)
+
+def top_discrepancies(df: pd.DataFrame, n=15) -> pd.DataFrame:
+    work = df[numeric_mask(df) & (df["domain"].str.contains("www.bally.com.au", na=False))].copy()
+    if work.empty:
+        return pd.DataFrame()
+    work["Cettire URL"] = work["c_product_url"].where(work["c_product_url"] != "", work["c_link"])
+    cols = [
+        "category", "domain", "c_title", "m_title",
+        "c_final", "m_final", "diff_c_minus_m", "Cettire URL", "matchlink"
+    ]
+    out = (work
+           .sort_values("diff_c_minus_m", ascending=False)
+           .head(n)[cols]
+           .rename(columns={
+                "c_title":"Cettire title",
+                "m_title":"Match title",
+                "c_final":"Cettire final (AUD)",
+                "m_final":"Match final (AUD)",
+                "diff_c_minus_m":"Diff (Cettire – Match)",
+                "matchlink":"Match URL"
+            }))
+    return out
+
+
+
+# --------------------------------------------------------------------------------------
+# Pages
+# --------------------------------------------------------------------------------------
+def page_analytics(df: pd.DataFrame):
+    st.header("Bally SKUs on Cettire.com")
+    st.caption("Comprehensive Products analysis by AU E-Commerce Analytics team")
+    st.caption("Data scraped: 1–4 Oct 2025 (AUD). Internal use only.")
+
+    # --- headline metrics ---
+    total_rows = len(df)
+    oos_count = int(df["oos_match"].sum())
+
+    # Matched rows = rows that have a valid match URL (regardless of prices/OOS)
+    match_url_present = (
+        df.get("matchlink", pd.Series([""] * len(df))).astype(str)
+        .str.startswith(("http://", "https://"))
+    )
+    matched_rows = int(match_url_present.sum())
+
+    colA, colB, colC, colD = st.columns(4)
+    with colA:
+        st.metric("Total rows", f"{total_rows:,}")
+    with colB:
+        st.metric("Cettire SKUs", f"{total_rows:,}")
+    with colC:
+        st.metric("Matched rows", f"{matched_rows:,}")
+    with colD:
+        st.metric("OOS (match)", f"{oos_count:,}")
+
+    # --- site-wise table ---
+    st.subheader("Site-wise comparison")
+    st.write(
+        "**Average Difference** = mean(Cettire final – Match final) using rows with both prices and non-OOS. "
+        "Positive means Cettire is more expensive; negative means cheaper."
+    )
+    ss = site_summary(df)
+    st.dataframe(ss, use_container_width=True)
+    st.download_button(
+        "Download site summary (CSV)",
+        ss.to_csv(index=False).encode("utf-8"),
+        "site_summary.csv",
+        "text/csv",
+    )
+
+    # --- charts: distribution / scatter / top abs diff ---
+    t = tidy_for_charts(df)
+    if not t.empty:
+        st.markdown("### Distribution of price differences")
+        st.caption("Histogram of (Cettire final – Match final). Vertical line at 0 means parity.")
+        hist = (
+            alt.Chart(t)
+            .mark_bar()
+            .encode(
+                x=alt.X("Diff:Q", bin=alt.Bin(maxbins=40), title="Difference (Cettire – Match) in AUD"),
+                y=alt.Y("count():Q", title="Count"),
+                tooltip=[alt.Tooltip("count()", title="Rows")],
+            )
+            .properties(height=220)
+        )
+        zero = alt.Chart(pd.DataFrame({"x": [0]})).mark_rule(color="#b42318").encode(x="x:Q")
+        st.altair_chart(hist + zero, use_container_width=True)
+
+        st.markdown("### Price relationship (Cettire vs Match)")
+        st.caption("Each point is a SKU; dashed line y=x means equal price.")
+        maxv = float(pd.Series([t["CettireFinal"].max(), t["MatchFinal"].max()]).max())
+        line_df = pd.DataFrame({"x": [0, maxv], "y": [0, maxv]})
+        pts = (
+            alt.Chart(t)
+            .mark_circle(size=60, opacity=0.7)
+            .encode(
+                x=alt.X("MatchFinal:Q", title="Match final (AUD)"),
+                y=alt.Y("CettireFinal:Q", title="Cettire final (AUD)"),
+                color=alt.Color("Domain:N", title="Site"),
+                tooltip=[
+                    alt.Tooltip("Domain:N", title="Site"),
+                    alt.Tooltip("CTitle:N", title="Cettire title"),
+                    alt.Tooltip("MTitle:N", title="Match title"),
+                    alt.Tooltip("CettireFinal:Q", title="Cettire (AUD)", format=",.2f"),
+                    alt.Tooltip("MatchFinal:Q", title="Match (AUD)", format=",.2f"),
+                    alt.Tooltip("Diff:Q", title="Diff", format=",.2f"),
+                ],
+            )
+            .properties(height=320)
+        )
+        xy = alt.Chart(line_df).mark_line(color="#475569", strokeDash=[6, 6]).encode(x="x:Q", y="y:Q")
+        st.altair_chart(pts + xy, use_container_width=True)
+
+        st.markdown("### Top 20 absolute price differences (bar view)")
+        top20 = t.assign(abs_diff=t["Diff"].abs()).sort_values("abs_diff", ascending=False).head(20)
+        top20["Title"] = top20["CTitle"].where(top20["CTitle"] != "", top20["MTitle"])
+        top20["TitleShort"] = top20["Title"].str.slice(0, 48)
+        bar = (
+            alt.Chart(top20)
+            .mark_bar()
+            .encode(
+                x=alt.X("abs_diff:Q", title="Absolute difference (AUD)"),
+                y=alt.Y("TitleShort:N", sort="-x", title=None),
+                color=alt.Color("Domain:N", legend=None),
+                tooltip=[
+                    alt.Tooltip("Domain:N", title="Site"),
+                    alt.Tooltip("Title:N"),
+                    alt.Tooltip("Diff:Q", title="Diff (Cettire–Match)", format=",.2f"),
+                    alt.Tooltip("CettireFinal:Q", title="Cettire", format=",.2f"),
+                    alt.Tooltip("MatchFinal:Q", title="Match", format=",.2f"),
+                ],
+            )
+            .properties(height=520)
+        )
+        st.altair_chart(bar, use_container_width=True)
+
+    # --- Bally AU category summary ---
+    st.subheader("Bally AU – category difference (select site)")
+    st.write("Breakdown for **www.bally.com.au** only (rows where both finals present and match is not OOS).")
+    ca = bally_au_category_summary(df)
+    st.dataframe(ca, use_container_width=True)
+    st.download_button(
+        "Download bally.com.au category summary (CSV)",
+        ca.to_csv(index=False).encode("utf-8"),
+        "bally_au_category_summary.csv",
+        "text/csv",
+    )
+
+    # --- Top discrepancies (Bally AU) ---
+    st.subheader("Top price discrepancies (Bally AU match)")
+    st.write("Rows with largest **(Cettire – Match)**. Links open in new tabs.")
+    topd = top_discrepancies(df, n=15)
+    if not topd.empty:
+        try:
+            st.dataframe(
+                topd,
+                use_container_width=True,
+                column_config={
+                    "Cettire URL": st.column_config.LinkColumn("Cettire URL"),
+                    "Match URL": st.column_config.LinkColumn("Match URL"),
+                },
+            )
+        except Exception:
+            st.dataframe(topd, use_container_width=True)
+    st.download_button(
+        "Download discrepancies (CSV)",
+        topd.to_csv(index=False).encode("utf-8"),
+        "top_discrepancies.csv",
+        "text/csv",
+    )
+
+    # --- Discounting: table + charts ---
+    st.subheader("Discounting summary (by site)")
+    st.write(
+        "**Cettire discount** = % where `sale < retail` on Cettire; "
+        "**Match discount** = % where `sale < retail` on matched site (excludes OOS)."
+    )
+    disc = discounting_summary(df)
+    st.dataframe(disc, use_container_width=True)
+    st.download_button(
+        "Download discounting (CSV)",
+        disc.to_csv(index=False).encode("utf-8"),
+        "discounting_summary.csv",
+        "text/csv",
+    )
+
+    if not disc.empty:
+        disc_plot = disc.copy()
+        disc_plot["site"] = disc_plot["domain"].str.replace(r"^www\.", "", regex=True)
+
+        # (A) Share discounted (% of SKUs) – Match side
+        share_df = disc_plot.sort_values("Pct_Match_Discount", ascending=False).copy()
+        share_df["DiscCount"] = (share_df["Pct_Match_Discount"] * share_df["Rows"] / 100.0).round().astype(int)
+
+        st.markdown("### Discounting by site (share of SKUs on sale)")
+        bar_disc = (
+            alt.Chart(share_df)
+            .mark_bar(size=36)
+            .encode(
+                x=alt.X("site:N", axis=alt.Axis(title=None, labelAngle=0)),
+                y=alt.Y("Pct_Match_Discount:Q", title="% of SKUs discounted", scale=alt.Scale(domain=[0, 100])),
+                tooltip=[
+                    alt.Tooltip("site:N", title="Site"),
+                    alt.Tooltip("Rows:Q", title="Total SKUs"),
+                    alt.Tooltip("DiscCount:Q", title="Discounted SKUs"),
+                    alt.Tooltip("Pct_Match_Discount:Q", title="% SKUs discounted", format=".1f"),
+                    alt.Tooltip("Pct_Cettire_Discount:Q", title="% SKUs discounted (Cettire)", format=".1f"),
+                ],
+            )
+            .properties(height=300)
+        )
+        labels_disc = bar_disc.mark_text(baseline="bottom", dy=-4, fontSize=12).encode(
+            text=alt.Text("Pct_Match_Discount:Q", format=".1f")
+        )
+        st.altair_chart(bar_disc + labels_disc, use_container_width=True)
+
+        # (B) Average discount among discounted SKUs – Match side
+        st.markdown("### Average discount on matched sites (only discounted SKUs)")
+        avg_df = disc_plot.sort_values("AvgDisc_Match", ascending=False).copy()
+        avg_df["DiscCount"] = (avg_df["Pct_Match_Discount"] * avg_df["Rows"] / 100.0).round().astype(int)
+        avg_df["label"] = avg_df["AvgDisc_Match"].map(lambda v: f"{v:.1f}%") + " • n=" + avg_df["DiscCount"].astype(str)
+        maxy = max(10.0, float(avg_df["AvgDisc_Match"].max() or 0)) * 1.15
+
+        bar_avg = (
+            alt.Chart(avg_df)
+            .mark_bar(size=36)
+            .encode(
+                x=alt.X("site:N", axis=alt.Axis(title=None, labelAngle=0)),
+                y=alt.Y("AvgDisc_Match:Q", title="Average discount (%)", scale=alt.Scale(domain=[0, maxy])),
+                tooltip=[
+                    alt.Tooltip("site:N", title="Site"),
+                    alt.Tooltip("AvgDisc_Match:Q", title="Avg discount (%)", format=".1f"),
+                    alt.Tooltip("DiscCount:Q", title="Discounted SKUs"),
+                    alt.Tooltip("Rows:Q", title="Total SKUs"),
+                    alt.Tooltip("Pct_Match_Discount:Q", title="% SKUs discounted", format=".1f"),
+                ],
+            )
+            .properties(height=320)
+        )
+        labels_avg = alt.Chart(avg_df).mark_text(baseline="bottom", dy=-4, fontSize=12).encode(
+            x="site:N", y="AvgDisc_Match:Q", text="label:N"
+        )
+        st.altair_chart(bar_avg + labels_avg, use_container_width=True)
+
+        st.markdown("### Category × domain (price-weighted average discount %)")
+
+    # Avg discount (%) among discounted SKUs only; includes DiscCount
+    avg_mat = cat_domain_price_weighted_avg(df)   # ['domain','site','category','AvgDiscount','DiscCount']
+
+    # We only need domain/site/category from the share table to keep keys aligned.
+    share_mat = cat_domain_share_discount(df)[["domain", "site", "category"]]
+
+    # Merge without duplicate DiscCount columns
+    heat_df = avg_mat.merge(share_mat, on=["domain", "site", "category"], how="left")
+    heat_df["DiscCount"] = heat_df["DiscCount"].fillna(0).astype(int)
+
+    if not heat_df.empty:
+        # Category order by discounted volume (more active first)
+        cat_order = (
+            heat_df.groupby("category")["DiscCount"]
+            .sum()
+            .sort_values(ascending=False)
+            .index.tolist()
+        )
+
+        # Show label only when > 0
+        heat_df["label"] = heat_df["AvgDiscount"].apply(
+            lambda v: f"{v:.1f}%" if pd.notna(v) and v > 0 else ""
+        )
+
+        heat = (
+            alt.Chart(heat_df)
+            .mark_rect()
+            .encode(
+                x=alt.X("category:N", title=None, sort=cat_order, axis=alt.Axis(labelAngle=0)),
+                y=alt.Y("site:N", title=None, sort="-x"),
+                color=alt.Color("AvgDiscount:Q", title="Avg discount (%)",
+                                scale=alt.Scale(scheme="blues", domain=[0, 100])),
+                tooltip=[
+                    alt.Tooltip("site:N", title="Site"),
+                    alt.Tooltip("category:N", title="Category"),
+                    alt.Tooltip("AvgDiscount:Q", title="Avg discount (%)", format=".1f"),
+                    alt.Tooltip("DiscCount:Q", title="Discounted SKUs (n)"),
+                ],
+            )
+            .properties(height=340)
+        )
+        labels = (
+            alt.Chart(heat_df)
+            .mark_text(fontSize=11)
+            .encode(
+                x=alt.X("category:N", sort=cat_order),
+                y="site:N",
+                text="label:N",
+                color=alt.value("#223"),
+            )
+        )
+        st.altair_chart(heat + labels, use_container_width=True)
+
+        # Compact pivot (hide zeros)
+    #     pivot = (
+    #         heat_df.pivot(index="site", columns="category", values="AvgDiscount")
+    #         .reindex(columns=cat_order)
+    #         .round(1)
+    #     )
+    #     pivot = pivot.where(pivot > 0)  # hide zeros/NaNs
+    #     st.dataframe(pivot, use_container_width=True)
+    # else:
+    #     st.info("No discounted SKUs found to compute the (domain × category) average discount.")
+
+
+def page_comparison(df: pd.DataFrame):
+    st.header("Bally products on Cettire")
+    st.caption("Comprehensive Products analysis by AU E-Com")
+    st.caption("Data scraped: 1–4 Oct 2025 (AUD). Internal use only.")
+
+    dff, _ = comparison_filters(df)
+
+    total = len(df)
+    showing = len(dff)
+    st.markdown(f'<div class="count-pill">Showing {showing:,} of {total:,} results</div>', unsafe_allow_html=True)
+
+    st.markdown(CARD_CSS, unsafe_allow_html=True)
+    st.markdown('<div class="app-wrap">', unsafe_allow_html=True)
+
+    PER_PAGE = 25
+    pages = max(1, math.ceil(showing / PER_PAGE))
+    c1, c2, _ = st.columns([1, 2, 6])
+    with c1:
+        page = st.number_input("Page", min_value=1, max_value=pages, value=1, step=1)
+    with c2:
+        st.write(f"({pages} pages)")
+
+    start = (page - 1) * PER_PAGE
+    end = start + PER_PAGE
+    page_rows = dff.iloc[start:end]
+
+    for _, row in page_rows.iterrows():
+        st.markdown(comp_card_html(row), unsafe_allow_html=True)
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+
+
+
+def main():
+    df = load_data("match_final.csv")  # <- your file name
+    tab = st.sidebar.radio(
+    "Go to",
+    ["Analytics", "Comparison"],
+    index=1,              # keep your default
+    key="nav_go_to"   )    # <-- unique key fixes the duplicate-ID error)
+    if tab == "Analytics":
+        page_analytics(df)
+    else:
+        page_comparison(df)
+
+if __name__ == "__main__":
+    main()

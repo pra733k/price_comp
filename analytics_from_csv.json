@@ -1,0 +1,437 @@
+{
+    "total_rows": 333,
+    "cettire_skus": 333,
+    "matched_rows": 253,
+    "oos_match": 2,
+    "site_summary": [
+        {
+            "domain": "www.bally.com.au",
+            "Rows": 126,
+            "Average_Difference": -204.70007936507935,
+            "Median_Difference": -200.01999999999998,
+            "Pct_Cheaper_Cettire": 73.01587301587301
+        },
+        {
+            "domain": "www.farfetch.com",
+            "Rows": 112,
+            "Average_Difference": -212.96758928571427,
+            "Median_Difference": -186.11,
+            "Pct_Cheaper_Cettire": 81.25
+        },
+        {
+            "domain": "www.davidjones.com",
+            "Rows": 7,
+            "Average_Difference": -309.50999999999993,
+            "Median_Difference": -289.81,
+            "Pct_Cheaper_Cettire": 100.0
+        },
+        {
+            "domain": "www.bally.ae",
+            "Rows": 4,
+            "Average_Difference": -126.99749999999997,
+            "Median_Difference": 30.315000000000026,
+            "Pct_Cheaper_Cettire": 50.0
+        },
+        {
+            "domain": "ballyofswitzerland.tw",
+            "Rows": 2,
+            "Average_Difference": -392.30500000000006,
+            "Median_Difference": -392.30500000000006,
+            "Pct_Cheaper_Cettire": 100.0
+        },
+        {
+            "domain": "www.bally.eu",
+            "Rows": 1,
+            "Average_Difference": -549.29,
+            "Median_Difference": -549.29,
+            "Pct_Cheaper_Cettire": 100.0
+        }
+    ],
+    "bally_au_category_summary": [
+        {
+            "category": "Shoes",
+            "Rows": 61,
+            "Average_Difference": -241.37245901639344,
+            "Median_Difference": -277.99,
+            "Pct_Cheaper_Cettire": 75.40983606557377
+        },
+        {
+            "category": "Clothes",
+            "Rows": 25,
+            "Average_Difference": -109.80520000000004,
+            "Median_Difference": -107.16000000000003,
+            "Pct_Cheaper_Cettire": 72.0
+        },
+        {
+            "category": "Belts",
+            "Rows": 16,
+            "Average_Difference": 11.163125000000012,
+            "Median_Difference": 85.56,
+            "Pct_Cheaper_Cettire": 37.5
+        },
+        {
+            "category": "Wallets & Card Holders",
+            "Rows": 14,
+            "Average_Difference": -195.62357142857144,
+            "Median_Difference": -177.54999999999998,
+            "Pct_Cheaper_Cettire": 85.71428571428571
+        },
+        {
+            "category": "Bags",
+            "Rows": 10,
+            "Average_Difference": -576.324,
+            "Median_Difference": -531.17,
+            "Pct_Cheaper_Cettire": 100.0
+        }
+    ],
+    "top_discrepancies": [
+        {
+            "category": "Clothes",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Bally Long Sleeved Buttoned Jacket",
+            "Match title": "Safari Jacket in Ebano Suede",
+            "Cettire final (AUD)": 4012.97,
+            "Match final (AUD)": 2370.0,
+            "Diff (Cettire \u2013 Match)": 1642.9699999999998,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-long-sleeved-buttoned-jacket-950030522",
+            "Match URL": "https://www.bally.com.au/en/products/safari-jacket-in-ebano-suede-6310663/"
+        },
+        {
+            "category": "Clothes",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Single-Breasted Long-Sleeved Blazer",
+            "Match title": "Adrien Brody Travel Collection Single-Breasted Blazer In Navy Blue Wool",
+            "Cettire final (AUD)": 2814.24,
+            "Match final (AUD)": 1962.0,
+            "Diff (Cettire \u2013 Match)": 852.2399999999998,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-single-breasted-long-sleeved-blazer-932904585",
+            "Match URL": "https://www.bally.com.au/en/products/adrien-brody-travel-collection-single-breasted-blazer-in-navy-blue-wool-6309568/"
+        },
+        {
+            "category": "Shoes",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Bally Pathy Lace-Up Derby Shoes",
+            "Match title": "Plume Loafer In Black Leather",
+            "Cettire final (AUD)": 1508.16,
+            "Match final (AUD)": 710.0,
+            "Diff (Cettire \u2013 Match)": 798.1600000000001,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-pathy-lace-up-derby-shoes-943828247",
+            "Match URL": "https://www.bally.com.au/en/products/plume-loafer-in-black-leather-6309735/"
+        },
+        {
+            "category": "Belts",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Button-Up Belted Coat",
+            "Match title": "Trench Coat in Navy Blue Mix Cotton",
+            "Cettire final (AUD)": 2338.71,
+            "Match final (AUD)": 1698.0,
+            "Diff (Cettire \u2013 Match)": 640.71,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-button-up-belted-coat-940500097",
+            "Match URL": "https://www.bally.com.au/en/products/trench-coat-in-navy-blue-mix-cotton-6308216/"
+        },
+        {
+            "category": "Belts",
+            "domain": "www.bally.com.au",
+            "Cettire title": "B Bold Logo Bukled Reversible Belt",
+            "Match title": "Reversible And Adjustable Belt in Black Leather",
+            "Cettire final (AUD)": 791.73,
+            "Match final (AUD)": 360.0,
+            "Diff (Cettire \u2013 Match)": 431.73,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-b-bold-logo-bukled-reversible-belt-939774897",
+            "Match URL": "https://www.bally.com.au/en/products/reversible-and-adjustable-belt-in-black-leather-6219934/"
+        },
+        {
+            "category": "Clothes",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Pleated Front Shorts",
+            "Match title": "Shorts in Navy Blue Cotton",
+            "Cettire final (AUD)": 819.52,
+            "Match final (AUD)": 425.0,
+            "Diff (Cettire \u2013 Match)": 394.52,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-pleated-front-shorts-925207036",
+            "Match URL": "https://www.bally.com.au/en/products/shorts-in-navy-blue-cotton-6306811/"
+        },
+        {
+            "category": "Clothes",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Straight-Leg Denim Jeans",
+            "Match title": "Relaxed Fit Denim Pants in Navy Blue Cotton",
+            "Cettire final (AUD)": 747.89,
+            "Match final (AUD)": 475.0,
+            "Diff (Cettire \u2013 Match)": 272.89,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-straight-leg-denim-jeans-948086411",
+            "Match URL": "https://www.bally.com.au/en/products/relaxed-fit-denim-pants-in-navy-blue-cotton-6311405/"
+        },
+        {
+            "category": "Clothes",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Pleated-Detail Turn-Up Hem Shorts",
+            "Match title": "Shorts in Navy Blue Cotton",
+            "Cettire final (AUD)": 673.8,
+            "Match final (AUD)": 425.0,
+            "Diff (Cettire \u2013 Match)": 248.79999999999995,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-pleated-detail-turn-up-hem-shorts-920764313",
+            "Match URL": "https://www.bally.com.au/en/products/shorts-in-navy-blue-cotton-6306811/"
+        },
+        {
+            "category": "Wallets & Card Holders",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Thar Logo Detailed Card Holder",
+            "Match title": NaN,
+            "Cettire final (AUD)": 246.44,
+            "Match final (AUD)": 0.0,
+            "Diff (Cettire \u2013 Match)": 246.44,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-thar-logo-detailed-card-holder-910948058",
+            "Match URL": NaN
+        },
+        {
+            "category": "Shoes",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Raise Low-Top Sneakers",
+            "Match title": "Raise Sneakers In Black Leather",
+            "Cettire final (AUD)": 692.14,
+            "Match final (AUD)": 460.0,
+            "Diff (Cettire \u2013 Match)": 232.14,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-raise-low-top-sneakers-941249870",
+            "Match URL": "https://www.bally.com.au/en/products/raise-sneakers-in-black-leather-6304574/"
+        },
+        {
+            "category": "Belts",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Bally Stripe Detailed Buckle Belt",
+            "Match title": "Shiffie 35mm Reversible Belt In Red, White and Black Fabric And Leather",
+            "Cettire final (AUD)": 505.93,
+            "Match final (AUD)": 340.0,
+            "Diff (Cettire \u2013 Match)": 165.93,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-stripe-detailed-buckle-belt-936508919",
+            "Match URL": "https://www.bally.com.au/en/products/shiffie-35mm-reversible-belt-in-red-white-and-black-fabric-and-leather-6306660/"
+        },
+        {
+            "category": "Belts",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Stripe Detailed Buckle Belt",
+            "Match title": "Shiffie 35mm Reversible Belt In Red, White and Black Fabric And Leather",
+            "Cettire final (AUD)": 505.93,
+            "Match final (AUD)": 340.0,
+            "Diff (Cettire \u2013 Match)": 165.93,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-stripe-detailed-buckle-belt-936849793",
+            "Match URL": "https://www.bally.com.au/en/products/shiffie-35mm-reversible-belt-in-red-white-and-black-fabric-and-leather-6306660/"
+        },
+        {
+            "category": "Shoes",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Salis Studded Sandals",
+            "Match title": "Salis Flat Sandal in Black Leather",
+            "Cettire final (AUD)": 971.46,
+            "Match final (AUD)": 825.0,
+            "Diff (Cettire \u2013 Match)": 146.46000000000004,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-salis-studded-sandals-949407083",
+            "Match URL": "https://www.bally.com.au/en/products/salis-flat-sandal-in-black-leather-6311424/"
+        },
+        {
+            "category": "Shoes",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Pathy Lace-Up Loafers",
+            "Match title": "Plume Moccasin in Chestnut Brown Suede",
+            "Cettire final (AUD)": 985.25,
+            "Match final (AUD)": 852.0,
+            "Diff (Cettire \u2013 Match)": 133.25,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-pathy-lace-up-loafers-946238230",
+            "Match URL": "https://www.bally.com.au/en/products/plume-moccasin-in-chestnut-brown-suede-6306766/"
+        },
+        {
+            "category": "Shoes",
+            "domain": "www.bally.com.au",
+            "Cettire title": "Block Heel Ballyrina Pumps",
+            "Match title": "Ballyrina Pump in White Leather",
+            "Cettire final (AUD)": 745.5,
+            "Match final (AUD)": 625.0,
+            "Diff (Cettire \u2013 Match)": 120.5,
+            "Cettire URL": "https://www.cettire.com/au/products/bally-block-heel-ballyrina-pumps-949021523",
+            "Match URL": "https://www.bally.com.au/en/products/ballyrina-pump-in-white-leather-6310872/"
+        }
+    ],
+    "discounting_summary": [
+        {
+            "domain": "www.bally.com.au",
+            "Rows": 126,
+            "Pct_Cettire_Discount": 100.0,
+            "Pct_Match_Discount": 39.682539682539684,
+            "AvgDisc_Match": 45.99411764705882
+        },
+        {
+            "domain": "www.farfetch.com",
+            "Rows": 113,
+            "Pct_Cettire_Discount": 100.0,
+            "Pct_Match_Discount": 78.76106194690266,
+            "AvgDisc_Match": 35.026370910067314
+        },
+        {
+            "domain": NaN,
+            "Rows": 79,
+            "Pct_Cettire_Discount": 100.0,
+            "Pct_Match_Discount": 0.0,
+            "AvgDisc_Match": NaN
+        },
+        {
+            "domain": "www.davidjones.com",
+            "Rows": 7,
+            "Pct_Cettire_Discount": 100.0,
+            "Pct_Match_Discount": 14.285714285714285,
+            "AvgDisc_Match": 30.0
+        },
+        {
+            "domain": "www.bally.ae",
+            "Rows": 4,
+            "Pct_Cettire_Discount": 100.0,
+            "Pct_Match_Discount": 75.0,
+            "AvgDisc_Match": 50.000051334250095
+        },
+        {
+            "domain": "ballyofswitzerland.tw",
+            "Rows": 2,
+            "Pct_Cettire_Discount": 100.0,
+            "Pct_Match_Discount": 50.0,
+            "AvgDisc_Match": 29.999826007272894
+        },
+        {
+            "domain": "www.bally.eu",
+            "Rows": 2,
+            "Pct_Cettire_Discount": 100.0,
+            "Pct_Match_Discount": 0.0,
+            "AvgDisc_Match": NaN
+        }
+    ],
+    "weighted_discount_by_domain_category": [
+        {
+            "domain": "ballyofswitzerland.tw",
+            "category": "Bags",
+            "Rows": 1,
+            "Discounted": 1,
+            "SumRetail": 1724.21,
+            "SumDisc": 517.26,
+            "PctWeighted": 29.999826007272894,
+            "domain_clean": "ballyofswitzerland.tw"
+        },
+        {
+            "domain": "www.bally.ae",
+            "category": "Bags",
+            "Rows": 2,
+            "Discounted": 2,
+            "SumRetail": 3177.52,
+            "SumDisc": 1488.8799999999999,
+            "PctWeighted": 46.85666809335582,
+            "domain_clean": "bally.ae"
+        },
+        {
+            "domain": "www.bally.ae",
+            "category": "Clothes",
+            "Rows": 1,
+            "Discounted": 1,
+            "SumRetail": 1091.43,
+            "SumDisc": 654.8600000000001,
+            "PctWeighted": 60.000183245833455,
+            "domain_clean": "bally.ae"
+        },
+        {
+            "domain": "www.bally.com.au",
+            "category": "Belts",
+            "Rows": 10,
+            "Discounted": 10,
+            "SumRetail": 8730.0,
+            "SumDisc": 3962.0,
+            "PctWeighted": 45.38373424971363,
+            "domain_clean": "bally.com.au"
+        },
+        {
+            "domain": "www.bally.com.au",
+            "category": "Clothes",
+            "Rows": 16,
+            "Discounted": 16,
+            "SumRetail": 27870.0,
+            "SumDisc": 12434.0,
+            "PctWeighted": 44.614280588446356,
+            "domain_clean": "bally.com.au"
+        },
+        {
+            "domain": "www.bally.com.au",
+            "category": "Shoes",
+            "Rows": 22,
+            "Discounted": 22,
+            "SumRetail": 24220.0,
+            "SumDisc": 11388.0,
+            "PctWeighted": 47.01899256812552,
+            "domain_clean": "bally.com.au"
+        },
+        {
+            "domain": "www.bally.com.au",
+            "category": "Wallets & Card Holders",
+            "Rows": 2,
+            "Discounted": 2,
+            "SumRetail": 1300.0,
+            "SumDisc": 518.0,
+            "PctWeighted": 39.84615384615385,
+            "domain_clean": "bally.com.au"
+        },
+        {
+            "domain": "www.davidjones.com",
+            "category": "Bags",
+            "Rows": 1,
+            "Discounted": 1,
+            "SumRetail": 670.0,
+            "SumDisc": 201.0,
+            "PctWeighted": 30.0,
+            "domain_clean": "davidjones.com"
+        },
+        {
+            "domain": "www.farfetch.com",
+            "category": "Accessories",
+            "Rows": 3,
+            "Discounted": 3,
+            "SumRetail": 1699.0,
+            "SumDisc": 570.0,
+            "PctWeighted": 33.549146556798114,
+            "domain_clean": "farfetch.com"
+        },
+        {
+            "domain": "www.farfetch.com",
+            "category": "Bags",
+            "Rows": 30,
+            "Discounted": 30,
+            "SumRetail": 48899.0,
+            "SumDisc": 15462.0,
+            "PctWeighted": 31.62027853330334,
+            "domain_clean": "farfetch.com"
+        },
+        {
+            "domain": "www.farfetch.com",
+            "category": "Clothes",
+            "Rows": 23,
+            "Discounted": 23,
+            "SumRetail": 37700.0,
+            "SumDisc": 15568.0,
+            "PctWeighted": 41.294429708222815,
+            "domain_clean": "farfetch.com"
+        },
+        {
+            "domain": "www.farfetch.com",
+            "category": "Shoes",
+            "Rows": 26,
+            "Discounted": 26,
+            "SumRetail": 38194.0,
+            "SumDisc": 15388.0,
+            "PctWeighted": 40.28905063622558,
+            "domain_clean": "farfetch.com"
+        },
+        {
+            "domain": "www.farfetch.com",
+            "category": "Wallets & Card Holders",
+            "Rows": 7,
+            "Discounted": 7,
+            "SumRetail": 5565.0,
+            "SumDisc": 2419.0,
+            "PctWeighted": 43.468104222821204,
+            "domain_clean": "farfetch.com"
+        }
+    ]
+}
