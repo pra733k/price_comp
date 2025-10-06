@@ -1,0 +1,7 @@
+/* Make the Streamlit header transparent */
+[data-testid="stHeader"]{background:transparent !important;}
+
+/* Optional: dark radial gradient background for the app */
+.stApp, main {
+  background: radial-gradient(1200px 800px at 20% -10%, #0b1222 0%, #09101d 30%, #070e19 50%, #060c16 70%, #050a12 100%) !important;
+}

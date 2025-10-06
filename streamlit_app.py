@@ -19,7 +19,315 @@ import altair as alt
 import streamlit as st
 # ... other imports ...
 
+
+def _bally_altair_theme():
+    return {
+        "config": {
+            "background": "#ffffff",
+            "view": {"fill": "#ffffff", "stroke": "#e5e5e5"},
+            "axis": {
+                "labelColor": "#111111",
+                "titleColor": "#111111",
+                "gridColor": "#f1f3f5",
+                "domainColor": "#d0d4da",
+            },
+            "legend": {"labelColor": "#111111", "titleColor": "#111111"},
+            "title": {"color": "#111111"},
+        }
+    }
+
+
+alt.themes.register("bally_light", _bally_altair_theme)
+alt.themes.enable("bally_light")
+
 st.set_page_config(page_title="Bally – Cettire Benchmark", layout="wide")
+
+# Global styling inspired by bally.com.au palette
+GLOBAL_CSS = """
+<style>
+html, body {
+    background: #ffffff !important;
+}
+
+:root {
+    --bally-page: #ffffff;
+    --bally-shell: #ffffff;
+    --bally-ink: #111111;
+    --bally-border: #e5e5e5;
+    --background-color: #ffffff !important;
+    --secondary-background-color: #f6f6f6 !important;
+    --text-color: #111111 !important;
+    --primary-color: #111111 !important;
+    --primary-color-rgb: 17,17,17 !important;
+}
+
+html, body, .stApp, #root, [data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"] > .main {
+    background: var(--bally-page) !important;
+    color: var(--bally-ink);
+    font-family: "Helvetica Neue", "Arial", sans-serif;
+    color-scheme: only light;
+}
+
+[data-testid="stHeader"] {
+    background: var(--bally-page) !important;
+    color: var(--bally-ink) !important;
+}
+
+header[data-testid="stHeader"] {
+    background: var(--bally-page);
+    border-bottom: 1px solid var(--bally-border);
+    box-shadow: none;
+}
+
+.main .block-container {
+    padding-top: 2rem;
+    background: var(--bally-page);
+}
+
+div[data-testid="stSidebar"] {
+    background: var(--bally-shell);
+    border-right: 1px solid var(--bally-border);
+}
+
+section[data-testid="stSidebar"] {
+    background: var(--bally-shell) !important;
+}
+
+div[data-testid="stSidebarCollapsedControl"] {
+    background: var(--bally-shell) !important;
+}
+
+div[data-testid="stSidebarNav"] {
+    background: var(--bally-shell) !important;
+}
+
+section[data-testid="stSidebar"] > div:first-child {
+    background: var(--bally-shell) !important;
+}
+
+div[data-testid="stSidebar"] *, div[data-testid="stSidebar"] label {
+    color: var(--bally-ink) !important;
+}
+
+div[data-testid="stSidebar"] button {
+    background: #111111;
+    border: none;
+    color: #ffffff !important;
+    font-size: 0.95rem;
+    border-radius: 999px;
+    padding: 0.35rem 1.2rem;
+    text-decoration: none;
+}
+
+div[data-testid="stSidebar"] button:hover {
+    background: #242424;
+}
+
+/* Harmonise selectboxes / multiselects with clean borders */
+div[data-baseweb="select"] > div {
+    background: var(--bally-page);
+    border-radius: 12px;
+    border: 1px solid #d0d4da;
+}
+
+div[data-baseweb="select"] input {
+    color: var(--bally-ink) !important;
+}
+
+[data-baseweb="menu"] {
+    background: #ffffff !important;
+    color: var(--bally-ink) !important;
+    border: 1px solid #d0d4da !important;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12) !important;
+}
+
+[data-baseweb="option"] {
+    background: #ffffff !important;
+    color: var(--bally-ink) !important;
+}
+
+[data-baseweb="option"]:hover,
+[data-baseweb="option"][aria-selected="true"] {
+    background: #f2f3f5 !important;
+    color: var(--bally-ink) !important;
+}
+
+div[data-testid="stSidebar"] .stCheckbox, div[data-testid="stSidebar"] label, div[data-testid="stSidebar"] input {
+    color: var(--bally-ink) !important;
+}
+
+div[data-testid="stSidebar"] p,
+div[data-testid="stSidebar"] span,
+div[data-testid="stSidebar"] .stMarkdown {
+    color: var(--bally-ink) !important;
+}
+
+div[data-testid="stSidebar"] .stRadio > div > label {
+    color: var(--bally-ink) !important;
+}
+
+div[data-baseweb="radio"] {
+    color: var(--bally-ink) !important;
+}
+
+div[data-testid="stSidebar"] .stTextInput > div > div > input {
+    background: var(--bally-page);
+    border-radius: 12px;
+    border: 1px solid #d0d4da;
+    color: var(--bally-ink) !important;
+}
+
+.stDownloadButton button {
+    border-radius: 999px;
+    background: #111111;
+    color: #ffffff;
+    border: none;
+    padding: 0.35rem 1.5rem;
+}
+
+div[data-testid="stMetricValue"] {
+    color: var(--bally-ink);
+}
+
+div[data-testid="stDataFrame"] {
+    background: var(--bally-page);
+    border-radius: 16px;
+    border: 1px solid var(--bally-border);
+}
+
+div[data-testid="stDataFrame"] table {
+    background: var(--bally-page) !important;
+    color: var(--bally-ink) !important;
+}
+
+div[data-testid="stDataFrame"] th {
+    background: #f2f2f2 !important;
+    color: var(--bally-ink) !important;
+}
+
+div[data-testid="stDataFrame"] td {
+    color: var(--bally-ink) !important;
+}
+
+[data-testid="stDataFrame"] [data-testid="stToolbar"] button {
+    background: #ffffff !important;
+    color: var(--bally-ink) !important;
+    border: 1px solid #d0d4da !important;
+}
+
+.stDataFrame div[data-testid="StyledDataFrame"] {
+    background: var(--bally-page) !important;
+    color: var(--bally-ink) !important;
+}
+
+.stDataFrame div[role="columnheader"] {
+    background: #f2f3f5 !important;
+    color: var(--bally-ink) !important;
+    border-bottom: 1px solid var(--bally-border);
+}
+
+.stDataFrame div[role="row"] {
+    background: var(--bally-page) !important;
+    color: var(--bally-ink) !important;
+}
+
+.stDataFrame div[role="gridcell"] {
+    border-color: rgba(0,0,0,0.05) !important;
+}
+
+.stDataFrame [class*="row_heading"],
+.stDataFrame [class*="col_heading"],
+.stDataFrame [class*="blank"] {
+    background: #f2f3f5 !important;
+    color: var(--bally-ink) !important;
+}
+
+.stDataFrame div[role="grid"],
+.stDataFrame div[role="grid"] table,
+.stDataFrame div[role="rowgroup"],
+[data-testid="stDataFrame"] div[data-testid="stStyledFullWidthTable"],
+[data-testid="stDataFrame"] div[data-testid="stStyledFullWidthTable"] table {
+    background: var(--bally-page) !important;
+    color: var(--bally-ink) !important;
+}
+
+[data-testid="stDataFrame"] .ag-root-wrapper,
+[data-testid="stDataFrame"] .ag-root-wrapper-body,
+[data-testid="stDataFrame"] .ag-center-cols-container,
+[data-testid="stDataFrame"] .ag-header,
+[data-testid="stDataFrame"] .ag-row,
+[data-testid="stDataFrame"] .ag-cell {
+    background-color: var(--bally-page) !important;
+    color: var(--bally-ink) !important;
+    border-color: rgba(0,0,0,0.05) !important;
+}
+
+[data-testid="stDataFrame"] .ag-header,
+[data-testid="stDataFrame"] .ag-header-row,
+[data-testid="stDataFrame"] .ag-header-cell {
+    background-color: #f2f3f5 !important;
+    color: var(--bally-ink) !important;
+    border-color: rgba(0,0,0,0.06) !important;
+}
+
+.stDataFrame tbody tr {
+    background: var(--bally-page) !important;
+}
+
+.vega-embed, .vega-embed canvas, .vega-embed svg {
+    background: var(--bally-page) !important;
+}
+
+.vg-tooltip {
+    color: var(--bally-ink);
+}
+
+.pagination-bar {
+    position: sticky;
+    top: 76px;
+    z-index: 6;
+    background: var(--bally-page);
+    padding: 0.5rem 0 0.75rem;
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.pagination-bar .stNumberInput input {
+    border-radius: 999px;
+    border: 1px solid #d0d4da;
+}
+
+.page-status {
+    padding-top: 1.8rem;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.page-meta {
+    padding-top: 1.8rem;
+    font-size: 13px;
+    color: #6b7280;
+    text-align: right;
+}
+</style>
+"""
+
+DEFAULT_FILTER_STATE = {
+    "flt_cats": ["All"],
+    "flt_sites": ["All"],
+    "flt_seasons": ["All"],
+    "flt_sort": "Default (Bally-first)",
+    "flt_naoos": True,
+    "flt_bucket": "All",
+    "flt_min": "",
+    "flt_max": "",
+}
+
+
+def reset_filter_state() -> None:
+    """Restore sidebar controls to their default selections."""
+    for key, value in DEFAULT_FILTER_STATE.items():
+        st.session_state[key] = value.copy() if isinstance(value, list) else value
 
 # --------------------------------------------------------------------------------------
 # App
@@ -280,30 +588,31 @@ def load_data(csv_path: str) -> pd.DataFrame:
 # --------------------------------------------------------------------------------------
 CARD_CSS = """
 <style>
-.app-wrap { max-width: 1400px; margin: 0 auto; }
+.app-wrap { max-width: 1280px; margin: 0 auto; padding: 0 2rem 3rem; }
 
-.count-pill { font-size:12px; color:#555; padding:2px 8px; border-radius:999px; background:#F1F3F5; display:inline-block; }
+.count-pill { font-size:12px; color:#374151; padding:4px 12px; border-radius:999px; background:#f1f3f5; display:inline-block; }
 
-.comp-row { display:flex; gap:24px; margin-bottom:18px; }
-.comp-tile { flex: 1; background:#fff; border:1px solid #e9ecef; border-radius:16px; box-shadow:0 1px 2px rgba(16,24,40,.06); overflow:hidden; }
+.comp-row { display:flex; gap:32px; margin-bottom:24px; }
+.comp-tile { flex: 1; background:var(--bally-page); border:1px solid var(--bally-border); border-radius:18px; box-shadow:0 12px 24px rgba(17,17,17,0.04); overflow:hidden; transition: box-shadow 0.2s ease; }
+.comp-tile:hover { box-shadow:0 18px 32px rgba(17,17,17,0.07); }
 .comp-tile a { color: inherit; text-decoration: none; display:block; }
-.comp-body { padding:14px 16px; }
+.comp-body { padding:18px 22px 20px; }
 
-.img-wrap { height: 260px; display:flex; align-items:center; justify-content:center; background:#F3F4F7; }
+.img-wrap { height: 280px; display:flex; align-items:center; justify-content:center; background:var(--bally-shell); }
 .img-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
 
-.site-label { font-size: 12px; color:#6b7280; margin-bottom:4px; }
-.title { font-weight:600; font-size:16px; line-height:1.2; margin:4px 0 10px 0; color:#0f172a; }
+.site-label { font-size: 12px; color:#6b7280; margin-bottom:4px; letter-spacing:0.08em; text-transform:uppercase; }
+.title { font-weight:600; font-size:17px; line-height:1.25; margin:6px 0 12px 0; color:var(--bally-ink); }
 .title a { text-decoration: underline; }
 
-.badge { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
+.badge { display:inline-block; font-size:12px; padding:2px 10px; border-radius:999px; background:#f7f2eb; color:#5b2c0c; border:1px solid #eadac6; }
 
-.price-line { display:flex; align-items:baseline; gap:10px; }
+.price-line { display:flex; align-items:baseline; gap:12px; }
 .strike { color:#94a3b8; text-decoration: line-through; }
-.price-accent { color:#111827; font-weight:700; }
+.price-accent { color:#111827; font-weight:700; font-size:17px; }
 .pct-pill { font-size:12px; border-radius:8px; padding:2px 6px; background:#fef3f2; color:#b42318; border:1px solid #fecdca; }
 
-.diff-note { font-size:12px; color:#475569; margin:8px 0 0 2px; }
+.diff-note { font-size:12px; color:#475569; margin:12px 4px 0; }
 
 .oos { font-weight:700; color:#b42318; }
 .dim { color:#94a3b8; }
@@ -429,38 +738,44 @@ def comp_card_html(r: pd.Series) -> str:
 
 def comparison_filters(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     st.subheader("Products", divider=False)
-    st.caption("Use the filters on the left. Pagination shows **25 comparisons per page**.")
+    st.caption("Use the filters on the left. Pagination shows **50 comparisons per page**.")
 
     # ---- safe accessor ----
     def col(name: str) -> pd.Series:
         return df[name] if name in df.columns else pd.Series(dtype=object)
 
     # ---- session defaults so “All” is selected on first load ----
-    if "flt_cats" not in st.session_state:    st.session_state.flt_cats = ["All"]
-    if "flt_sites" not in st.session_state:   st.session_state.flt_sites = ["All"]
-    if "flt_seasons" not in st.session_state: st.session_state.flt_seasons = ["All"]
+    for key, default in DEFAULT_FILTER_STATE.items():
+        if key not in st.session_state:
+            st.session_state[key] = default.copy() if isinstance(default, list) else default
 
     # ---- helper: expand “All” ----
     def expand_all(selected: list[str], all_vals: list[str]) -> list[str]:
         return all_vals if (not selected) or ("All" in selected) else selected
 
     with st.sidebar:
-        st.markdown("### Filters")
+        title_col, clear_col = st.columns([2, 1])
+        with title_col:
+            st.markdown("### Filters")
+        with clear_col:
+            if st.button("Clear all filters", key="btn_clear_filters"):
+                reset_filter_state()
+                rerun = getattr(st, "rerun", None)
+                if callable(rerun):
+                    rerun()
+                else:
+                    exp_rerun = getattr(st, "experimental_rerun", None)
+                    if callable(exp_rerun):
+                        exp_rerun()
 
         cats    = sorted([c for c in col("category").dropna().unique().tolist() if c])
         sites   = sorted([d for d in col("domain").dropna().unique().tolist() if d])
         seasons = sorted([t for t in col("season_union").dropna().unique().tolist() if t])
 
         # Multiselects with an explicit “All” option
-        sel_cats_raw = st.multiselect(
-            "Category", ["All", *cats], key="flt_cats", default=st.session_state.flt_cats
-        )
-        sel_sites_raw = st.multiselect(
-            "Matched site", ["All", *sites], key="flt_sites", default=st.session_state.flt_sites
-        )
-        sel_seasons_raw = st.multiselect(
-            "Season tag (either side)", ["All", *seasons], key="flt_seasons", default=st.session_state.flt_seasons
-        )
+        sel_cats_raw = st.multiselect("Category", ["All", *cats], key="flt_cats")
+        sel_sites_raw = st.multiselect("Matched site", ["All", *sites], key="flt_sites")
+        sel_seasons_raw = st.multiselect("Season tag (either side)", ["All", *seasons], key="flt_seasons")
 
         sel_cats    = expand_all(sel_cats_raw, cats)
         sel_sites   = expand_all(sel_sites_raw, sites)
@@ -475,21 +790,21 @@ def comparison_filters(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
             "Match final (low → high)",
             "Match final (high → low)",
         ]
-        sort_choice = st.selectbox("Sort products by", sort_options, index=0, key="flt_sort")
+        sort_choice = st.selectbox("Sort products by", sort_options, key="flt_sort")
 
-        include_na_oos = st.checkbox("Include NA / OOS", value=True, key="flt_naoos")
+        include_na_oos = st.checkbox("Include NA / OOS", key="flt_naoos")
 
         st.markdown("### Price filter (Cettire final)")
         bucket = st.selectbox(
             "Price bucket",
             ["All", "$0–$250", "$250–$500", "$500–$1000", "$1000–$2000", "$2000+"],
-            index=0, key="flt_bucket"
+            key="flt_bucket"
         )
         cmin, cmax = st.columns(2)
         with cmin:
-            manual_min = st.text_input("Manual min (AUD)", value="", key="flt_min")
+            manual_min = st.text_input("Manual min (AUD)", key="flt_min")
         with cmax:
-            manual_max = st.text_input("Manual max (AUD)", value="", key="flt_max")
+            manual_max = st.text_input("Manual max (AUD)", key="flt_max")
 
     # ---- required columns check (fast bail-out with friendly msg) ----
     required = {"domain","category","season_union","c_final","m_final","oos_match","diff_c_minus_m","site_priority"}
@@ -571,9 +886,6 @@ def comparison_filters(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         "sel_seasons": sel_seasons_raw,
     }
     return dff, controls
-    dff, _ = comparison_filters(df)
-    if dff.empty:
-        st.stop()  # avoid rendering / sorting further when nothing matches
 
 
 # --------------------------------------------------------------------------------------
@@ -981,7 +1293,7 @@ def page_analytics(df: pd.DataFrame):
 
 
 def page_comparison(df: pd.DataFrame):
-    st.header("Bally products on Cettire")
+    st.header("Bally SKUs on Cettire")
     st.caption("Comprehensive Products analysis by AU E-Com")
     st.caption("Data scraped: 1–4 Oct 2025 (AUD). Internal use only.")
 
@@ -989,22 +1301,38 @@ def page_comparison(df: pd.DataFrame):
 
     total = len(df)
     showing = len(dff)
-    st.markdown(f'<div class="count-pill">Showing {showing:,} of {total:,} results</div>', unsafe_allow_html=True)
 
     st.markdown(CARD_CSS, unsafe_allow_html=True)
     st.markdown('<div class="app-wrap">', unsafe_allow_html=True)
 
-    PER_PAGE = 25
+    PER_PAGE = 50
     pages = max(1, math.ceil(showing / PER_PAGE))
-    c1, c2, _ = st.columns([1, 2, 6])
-    with c1:
+    st.markdown('<div class="pagination-bar">', unsafe_allow_html=True)
+    pager_cols = st.columns([1.2, 3, 3])
+    with pager_cols[0]:
         page = st.number_input("Page", min_value=1, max_value=pages, value=1, step=1)
-    with c2:
-        st.write(f"({pages} pages)")
 
     start = (page - 1) * PER_PAGE
-    end = start + PER_PAGE
+    end = min(start + PER_PAGE, showing)
+    if showing:
+        display_text = f"Showing {start + 1:,}–{end:,} of {showing:,} comparisons"
+    else:
+        display_text = "Showing 0 comparisons"
+
+    with pager_cols[1]:
+        st.markdown(f"<div class='page-status'>{display_text}</div>", unsafe_allow_html=True)
+    meta_label = "page" if pages == 1 else "pages"
+    if showing == total:
+        meta_text = f"{pages} {meta_label} • {total:,} SKUs"
+    else:
+        meta_text = f"{pages} {meta_label} • {showing:,} of {total:,} filtered"
+    with pager_cols[2]:
+        st.markdown(f"<div class='page-meta'>{meta_text}</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
     page_rows = dff.iloc[start:end]
+
+    st.markdown(f'<div class="count-pill">{display_text}</div>', unsafe_allow_html=True)
 
     for _, row in page_rows.iterrows():
         st.markdown(comp_card_html(row), unsafe_allow_html=True)
@@ -1016,6 +1344,7 @@ def page_comparison(df: pd.DataFrame):
 
 
 def main():
+    st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
     df = load_data("match_final.csv")  # <- your file name
     tab = st.sidebar.radio(
     "Go to",
