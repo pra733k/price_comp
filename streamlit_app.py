@@ -1345,7 +1345,7 @@ def page_comparison(df: pd.DataFrame):
 
 def main():
     st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
-    df = load_data("match_final.csv")  # <- your file name
+    df = load_data("match_final_gs.csv")  # <- your file name
     tab = st.sidebar.radio(
     "Go to",
     ["Analytics", "Comparison"],
@@ -1358,3 +1358,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+print
