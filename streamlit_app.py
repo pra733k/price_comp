@@ -321,6 +321,7 @@ DEFAULT_FILTER_STATE = {
     "flt_bucket": "All",
     "flt_min": "",
     "flt_max": "",
+    "flt_gs": "All",
 }
 
 
@@ -771,6 +772,7 @@ def comparison_filters(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         cats    = sorted([c for c in col("category").dropna().unique().tolist() if c])
         sites   = sorted([d for d in col("domain").dropna().unique().tolist() if d])
         seasons = sorted([t for t in col("season_union").dropna().unique().tolist() if t])
+        gs_exists = "GS" in df.columns
 
         # Multiselects with an explicit “All” option
         sel_cats_raw = st.multiselect("Category", ["All", *cats], key="flt_cats")
@@ -805,6 +807,14 @@ def comparison_filters(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
             manual_min = st.text_input("Manual min (AUD)", key="flt_min")
         with cmax:
             manual_max = st.text_input("Manual max (AUD)", key="flt_max")
+        gs_choice = st.selectbox(
+            "GS flag",
+            ["All", "Yes", "No"],
+            key="flt_gs",
+            disabled=not gs_exists,
+        )
+        if not gs_exists:
+            st.caption("Upload data with a `GS` column (values Y/N) to enable this filter.")
 
     # ---- required columns check (fast bail-out with friendly msg) ----
     required = {"domain","category","season_union","c_final","m_final","oos_match","diff_c_minus_m","site_priority"}
@@ -819,6 +829,9 @@ def comparison_filters(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     if sel_cats:    dff = dff[dff["category"].isin(sel_cats)]
     if sel_sites:   dff = dff[dff["domain"].isin(sel_sites)]
     if sel_seasons: dff = dff[dff["season_union"].isin(sel_seasons)]
+    if ("GS" in dff.columns) and (gs_choice != "All"):
+        target_flag = "Y" if gs_choice == "Yes" else "N"
+        dff = dff[dff["GS"].fillna("").str.strip().str.upper() == target_flag]
 
     if not include_na_oos:
         dff = dff[(dff["c_final"].notna()) & (dff["m_final"].notna()) & (~dff["oos_match"])]
@@ -848,6 +861,7 @@ def comparison_filters(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
             "include_na_oos": include_na_oos, "bucket": bucket,
             "manual_min": manual_min, "manual_max": manual_max, "sort": sort_choice,
             "sel_cats": sel_cats_raw, "sel_sites": sel_sites_raw, "sel_seasons": sel_seasons_raw,
+            "gs_choice": gs_choice,
         }
 
     # ---- Sort (Bally-first default) ----
@@ -884,6 +898,7 @@ def comparison_filters(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         "sel_cats": sel_cats_raw,
         "sel_sites": sel_sites_raw,
         "sel_seasons": sel_seasons_raw,
+        "gs_choice": gs_choice,
     }
     return dff, controls
 
